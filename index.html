@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bali Investment Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7fb; --surface:#ffffff; --surface-2:#f8fafc;
+  --border:#e5e7eb; --border-soft:#f1f5f9;
+  --text:#0f172a; --text-2:#475569; --text-3:#94a3b8; --text-4:#cbd5e1;
+  --primary:#4f46e5; --primary-light:#eef2ff; --primary-hover:#4338ca;
+  --success:#059669; --success-light:#ecfdf5;
+  --amber:#d97706; --amber-light:#fffbeb;
+  --red:#dc2626; --red-light:#fef2f2;
+  --purple:#7c3aed; --purple-light:#f5f3ff;
+  --blue:#2563eb; --blue-light:#eff6ff;
+  --shadow-xs:0 1px 2px rgb(15 23 42 / .04);
+  --shadow-sm:0 1px 3px rgb(15 23 42 / .06), 0 1px 2px -1px rgb(15 23 42 / .04);
+  --shadow:0 4px 6px -1px rgb(15 23 42 / .06), 0 2px 4px -2px rgb(15 23 42 / .04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-feature-settings:'cv11','ss01';
+  font-size:14px; line-height:1.5; min-height:100vh; overflow:hidden;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.display{font-family:'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.02em}
+
+/* ── Header ── */
+.header{
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; gap:14px;
+  flex-wrap:nowrap; overflow-x:auto; height:64px;
+}
+.logo{font-weight:800; font-size:17px; color:var(--text); white-space:nowrap; letter-spacing:-.5px}
+.logo span{color:var(--primary)}
+.sessions{display:flex; gap:6px; flex:1; overflow-x:auto; min-width:0; padding:2px 0}
+.pill{
+  padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600;
+  cursor:pointer; white-space:nowrap; border:1px solid transparent; transition:all .15s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.pill.active{background:var(--primary); color:#fff; box-shadow:var(--shadow-xs)}
+.pill.inactive{background:var(--surface); color:var(--text-2); border-color:var(--border)}
+.pill.inactive:hover{border-color:var(--primary); color:var(--primary); background:var(--primary-light)}
+.pill.new-pill{background:transparent; border:1px dashed var(--text-4); color:var(--text-3); font-weight:500}
+.pill.new-pill:hover{border-color:var(--primary); color:var(--primary)}
+.session-edit{font-size:11px; opacity:.7; cursor:pointer}
+.session-edit:hover{opacity:1}
+.btn-danger{
+  padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
+  cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--red); white-space:nowrap;
+}
+.btn-danger:hover{background:var(--red-light); border-color:var(--red)}
+
+/* ── KPI Bar ── */
+.kpi-bar{
+  display:grid; grid-template-columns:repeat(5,1fr);
+  background:var(--surface); border-bottom:1px solid var(--border);
+}
+.kpi{padding:14px 22px; border-right:1px solid var(--border-soft); position:relative}
+.kpi:last-child{border-right:none}
+.kpi-label{
+  font-size:10px; color:var(--text-3); text-transform:uppercase;
+  letter-spacing:.08em; font-weight:600; margin-bottom:4px;
+}
+.kpi-value{font-size:22px; font-weight:800; line-height:1.1; letter-spacing:-.02em}
+.kpi-sub{font-size:11px; color:var(--text-3); margin-top:4px; font-weight:500}
+
+/* ── Colors ── */
+.green{color:var(--success)}
+.purple{color:var(--purple)}
+.amber{color:var(--amber)}
+.blue{color:var(--blue)}
+.red{color:var(--red)}
+.indigo{color:var(--primary)}
+
+/* ── Main Layout ── */
+.main{
+  display:grid; grid-template-columns:420px 1fr;
+  height:calc(100vh - 64px); overflow:hidden;
+}
+
+/* ── FX Badge in Header ── */
+.fx-badge{
+  display:flex; align-items:center; gap:8px; flex-shrink:0;
+  padding:6px 12px; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:8px; font-size:12px; font-variant-numeric:tabular-nums;
+}
+.fx-badge .fx-prefix{color:var(--text-3); font-weight:500}
+.fx-badge input{
+  width:80px; background:transparent; border:none; outline:none; text-align:right;
+  color:var(--text); font-weight:700; font-size:12px; font-family:inherit;
+  font-variant-numeric:tabular-nums; padding:0;
+}
+.fx-badge .fx-unit{color:var(--text-3); font-size:11px; font-weight:500}
+.fx-badge .fx-refresh{
+  background:none; border:none; cursor:pointer; color:var(--primary);
+  font-size:13px; padding:2px 6px; border-radius:4px; line-height:1;
+  font-weight:700; transition:all .15s;
+}
+.fx-badge .fx-refresh:hover{background:var(--primary-light)}
+.fx-badge .fx-refresh.spin{animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.fx-badge .fx-status{font-size:10px; color:var(--text-3)}
+
+/* ── Inline USD under values ── */
+.usd{font-size:12px; color:var(--text-2); font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; letter-spacing:-.005em}
+.amt{font-size:14px; font-weight:700; line-height:1.2; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.field-auto{display:flex; flex-direction:column}
+.field-auto .amt{color:var(--success)}
+.field-auto .usd{color:var(--success); opacity:.7}
+.sell-result .amt{font-size:22px; font-weight:800; color:var(--amber); letter-spacing:-.02em}
+.sell-result .usd{font-size:13px; color:var(--amber); opacity:.75; font-weight:700}
+.summary-card .amt{font-size:18px; font-weight:800; letter-spacing:-.02em}
+.summary-card .usd{margin-top:4px; font-size:13px; font-weight:700}
+/* Color-matched USD lines tied to the value above */
+.summary-card .card-value.green + .usd{color:var(--success); opacity:.7}
+.summary-card .card-value.purple + .usd{color:var(--purple); opacity:.7}
+.summary-card .card-value.amber + .usd{color:var(--amber); opacity:.75}
+.summary-card .card-value.blue + .usd{color:var(--blue); opacity:.7}
+.summary-card .card-value.red + .usd{color:var(--red); opacity:.7}
+.result-item .amt{font-size:20px; font-weight:800; letter-spacing:-.02em}
+.result-item .usd{font-size:12px; font-weight:600}
+/* ROI pill */
+.roi-pill{
+  display:inline-block; padding:3px 10px; margin-top:8px;
+  border-radius:6px; font-size:12px; font-weight:700;
+  font-variant-numeric:tabular-nums; letter-spacing:-.005em;
+}
+.roi-pill.green{background:var(--success-light); color:var(--success)}
+.roi-pill.red{background:var(--red-light); color:var(--red)}
+.roi-pill.amber{background:var(--amber-light); color:var(--amber)}
+.roi-pill.blue{background:var(--blue-light); color:var(--blue)}
+.roi-pill.purple{background:var(--purple-light); color:var(--purple)}
+/* 4-col grid for the richer summary set */
+.summary-grid{grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))}
+.panel-left{
+  border-right:1px solid var(--border); overflow-y:auto; background:var(--surface);
+}
+.panel-right{
+  overflow-y:auto; background:var(--bg);
+  display:flex; flex-direction:column;
+}
+
+/* ── Form ── */
+.form-section{padding:18px 22px; border-bottom:1px solid var(--border-soft)}
+.section-title{
+  font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;
+  letter-spacing:.1em; margin-bottom:14px; display:flex; align-items:center; gap:10px;
+}
+.section-title::after{content:''; flex:1; height:1px; background:var(--border)}
+.field{margin-bottom:12px}
+.field label{display:block; font-size:12px; color:var(--text-2); margin-bottom:5px; font-weight:500}
+.field input, .field select, .field textarea{
+  width:100%; background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px; color:var(--text); font-size:13px;
+  font-family:inherit; outline:none; transition:all .15s;
+  font-variant-numeric:tabular-nums;
+}
+.field input:hover, .field select:hover{border-color:var(--text-4)}
+.field input:focus, .field select:focus, .field textarea:focus{
+  border-color:var(--primary); box-shadow:0 0 0 3px rgb(79 70 229 / .12);
+}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.field-auto{
+  font-size:14px; font-weight:700; color:var(--success);
+  background:var(--success-light); border:1px solid #a7f3d0;
+  border-radius:8px; padding:8px 12px;
+  font-variant-numeric:tabular-nums; letter-spacing:-.01em;
+}
+.field-auto-sub{font-size:10px; color:var(--success); opacity:.8; margin-top:4px; font-weight:500}
+
+/* ── Margin Slider ── */
+.margin-block{
+  padding:18px 22px; border-bottom:1px solid var(--border-soft);
+  background:linear-gradient(180deg, var(--amber-light) 0%, var(--surface) 100%);
+}
+.margin-header{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px}
+.margin-label{font-size:11px; font-weight:700; color:var(--amber); text-transform:uppercase; letter-spacing:.1em}
+.margin-val{font-size:30px; font-weight:800; color:var(--amber); letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+input[type=range]{
+  width:100%; -webkit-appearance:none; height:6px; border-radius:3px; outline:none; cursor:pointer;
+  margin:6px 0 12px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:var(--amber); cursor:pointer; border:2px solid var(--surface);
+  box-shadow:var(--shadow-sm);
+}
+.sell-result{
+  background:var(--surface); border:1px solid var(--amber); border-radius:10px;
+  padding:14px; box-shadow:var(--shadow-xs);
+}
+.sr-label{font-size:10px; color:var(--text-2); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:.07em}
+.sr-value{font-size:22px; font-weight:800; color:var(--amber); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.sr-sub{font-size:11px; color:var(--text-3); margin-top:4px; font-weight:500}
+
+/* ── Right Tabs ── */
+.right-tabs{
+  display:flex; border-bottom:1px solid var(--border); background:var(--surface);
+  flex-shrink:0; overflow-x:auto; padding:0 16px;
+}
+.rtab{
+  padding:14px 16px; font-size:13px; font-weight:600; color:var(--text-3);
+  cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:all .15s;
+}
+.rtab.active{color:var(--primary); border-bottom-color:var(--primary)}
+.rtab:hover:not(.active){color:var(--text-2)}
+.right-content{padding:20px; flex:1}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── Summary Cards ── */
+.summary-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px}
+.summary-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:16px; box-shadow:var(--shadow-xs); transition:all .15s;
+}
+.summary-card:hover{box-shadow:var(--shadow-sm); transform:translateY(-1px)}
+.card-label{
+  font-size:11px; color:var(--text-3); text-transform:uppercase;
+  letter-spacing:.08em; font-weight:600; margin-bottom:8px;
+}
+.card-value{font-size:18px; font-weight:800; letter-spacing:-.02em; line-height:1.2; font-variant-numeric:tabular-nums}
+.card-sub{font-size:11px; color:var(--text-3); margin-top:6px; font-weight:500}
+
+/* ── Chart Box ── */
+.chart-box{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:18px 20px; margin-bottom:14px; box-shadow:var(--shadow-xs);
+}
+.chart-title{
+  font-size:11px; font-weight:700; color:var(--text-2);
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px;
+}
+.chart-wrap{position:relative; width:100%; height:280px}
+
+/* ── Tables ── */
+.sim-table{width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums}
+.sim-table th{
+  text-align:left; padding:10px 12px; font-size:10px; color:var(--text-3);
+  text-transform:uppercase; letter-spacing:.08em; border-bottom:1px solid var(--border);
+  font-weight:700;
+}
+.sim-table td{padding:10px 12px; border-bottom:1px solid var(--border-soft); font-weight:500}
+.sim-table tr:hover td{background:var(--surface-2)}
+.sim-table tr:last-child td{border-bottom:none}
+
+.compare-table{width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums}
+.compare-table th{
+  background:var(--surface-2); padding:10px 14px; font-size:10px; color:var(--text-3);
+  text-transform:uppercase; letter-spacing:.08em; border-bottom:1px solid var(--border);
+  text-align:left; font-weight:700;
+}
+.compare-table td{padding:10px 14px; border-bottom:1px solid var(--border-soft); font-weight:500}
+.compare-table .metric-name{color:var(--text-2); font-weight:600}
+.compare-table .best{
+  color:var(--success); font-weight:800; background:var(--success-light);
+  border-radius:6px; box-shadow:inset 0 0 0 1px #a7f3d0;
+}
+
+.pos{color:var(--success); font-weight:600}
+.neg{color:var(--red); font-weight:600}
+.dim{color:var(--text-3)}
+
+/* ── Result Box ── */
+.result-box{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:14px}
+.result-item{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px; box-shadow:var(--shadow-xs);
+}
+.rl{font-size:11px; color:var(--text-3); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:.07em}
+.rv{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+
+/* ── Tab Controls ── */
+.tab-controls{
+  display:flex; align-items:center; gap:14px; margin-bottom:14px;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:12px 16px; box-shadow:var(--shadow-xs); flex-wrap:wrap;
+}
+.tab-controls label{font-size:12px; color:var(--text-2); font-weight:500}
+.tab-controls input{
+  width:80px; background:var(--surface); border:1px solid var(--border);
+  border-radius:6px; padding:6px 10px; color:var(--text); font-size:13px;
+  font-family:inherit; outline:none; font-variant-numeric:tabular-nums;
+}
+.tab-controls input:focus{border-color:var(--primary); box-shadow:0 0 0 3px rgb(79 70 229 / .12)}
+
+/* ── Modal ── */
+.modal-overlay{
+  position:fixed; inset:0; background:rgb(15 23 42 / .35); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; z-index:999;
+}
+.modal-box{
+  background:var(--surface); border-radius:16px; padding:24px;
+  width:360px; box-shadow:0 25px 50px -12px rgb(15 23 42 / .25);
+}
+.modal-box h3{font-size:16px; font-weight:700; margin-bottom:14px}
+.modal-box input{
+  width:100%; background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px; color:var(--text); font-size:14px;
+  font-family:inherit; outline:none; margin-bottom:16px;
+}
+.modal-box input:focus{border-color:var(--primary); box-shadow:0 0 0 3px rgb(79 70 229 / .12)}
+.modal-actions{display:flex; gap:8px; justify-content:flex-end}
+.btn-cancel{
+  padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600;
+  cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--text-2);
+}
+.btn-cancel:hover{background:var(--surface-2)}
+.btn-confirm{
+  padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600;
+  cursor:pointer; background:var(--primary); border:none; color:#fff;
+}
+.btn-confirm:hover{background:var(--primary-hover)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px; height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border); border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-4)}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="logo display">Bali <span>Investment</span> Dashboard</div>
+  <div class="fx-badge" title="Klik tombol ↻ untuk refresh kurs live">
+    <span class="fx-prefix">$1 =</span>
+    <span style="color:var(--text-3);font-size:11px">Rp</span>
+    <input type="text" id="f-fx" value="16.000">
+    <button class="fx-refresh" id="fx-refresh-btn" onclick="refreshFX(true)" title="Refresh kurs">↻</button>
+  </div>
+  <div class="sessions" id="session-pills"></div>
+  <button class="pill new-pill" onclick="newSession()">+ Sesi Baru</button>
+  <button class="btn-danger" onclick="deleteSession()">Hapus</button>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- ── Left: Inputs ── -->
+  <div class="panel-left">
+
+    <!-- Tanah & Leasehold -->
+    <div class="form-section">
+      <div class="section-title">Tanah &amp; Leasehold</div>
+      <div class="field-row">
+        <div class="field"><label>Luas Tanah (m²)</label><input type="number" id="f-land" min="0"></div>
+        <div class="field"><label>Durasi Lease (tahun)</label><input type="number" id="f-years" min="1"></div>
+      </div>
+      <div class="field"><label>Harga Leasehold / m² / tahun</label><input type="text" id="f-price-sqm"></div>
+      <div class="field">
+        <label>Total Biaya Leasehold (auto)</label>
+        <div class="field-auto" id="a-leasehold">—</div>
+        <div class="field-auto-sub" id="a-leasehold-sub">—</div>
+      </div>
+      <div class="field">
+        <label>Skema Pembayaran Lease</label>
+        <select id="f-terms" onchange="onTermsChange()">
+          <option value="upfront">Upfront — lunas hari ke-1</option>
+          <option value="installment">Cicilan — DP + angsuran tahunan</option>
+        </select>
+      </div>
+      <div id="installment-wrap" style="display:none">
+        <div class="field-row">
+          <div class="field"><label>DP (%)</label><input type="number" id="f-dp" min="0" max="100"></div>
+          <div class="field"><label>Tenor (tahun)</label><input type="number" id="f-tenor" min="1"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Jumlah DP</label><div class="field-auto" id="a-dp">—</div></div>
+          <div class="field"><label>Cicilan / Tahun</label><div class="field-auto" id="a-install">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bangunan & Biaya -->
+    <div class="form-section">
+      <div class="section-title">Bangunan &amp; Biaya</div>
+      <div class="field"><label>Jumlah Unit</label><input type="number" id="f-units" min="1"></div>
+      <div class="field-row">
+        <div class="field"><label>Ukuran Unit (m²)</label><input type="number" id="f-usize" min="1"></div>
+        <div class="field"><label>Biaya Bangun / Unit</label><input type="text" id="f-build"></div>
+      </div>
+      <div class="field">
+        <label>Total Biaya Bangun (auto)</label>
+        <div class="field-auto" id="a-build">—</div>
+        <div class="field-auto-sub" id="a-build-sub">—</div>
+      </div>
+      <div class="field"><label>Biaya Misc (legal, notaris, perizinan, dll.)</label><input type="text" id="f-misc"></div>
+      <div class="field-row">
+        <div class="field"><label>Komisi Agen Beli</label><input type="text" id="f-agentbuy"></div>
+        <div class="field"><label>FF&amp;E / Furnitur</label><input type="text" id="f-ffe"></div>
+      </div>
+      <div class="field"><label>Opex Tahunan (% dari total investasi)</label><input type="number" id="f-opex" min="0" max="50" step="0.5"></div>
+      <div class="field">
+        <label>Total Biaya / Unit (auto)</label>
+        <div class="field-auto" id="a-cpu">—</div>
+        <div class="field-auto-sub" id="a-cpu-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Margin -->
+    <div class="margin-block">
+      <div class="section-title">Target Margin</div>
+      <div class="margin-header">
+        <div class="margin-label">Profit Margin</div>
+        <div class="margin-val" id="margin-display">30%</div>
+      </div>
+      <input type="range" id="f-margin" min="5" max="150" step="1" value="30">
+      <div class="field" style="margin-top:8px"><label>Komisi Agen Jual (% dari harga jual)</label><input type="number" id="f-agentsell" min="0" max="20" step="0.5"></div>
+      <div class="sell-result">
+        <div class="sr-label">Harga Jual / Unit (Rekomendasi)</div>
+        <div class="sr-value" id="a-sell">—</div>
+        <div class="sr-sub" id="a-sell-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Pendapatan Sewa -->
+    <div class="form-section">
+      <div class="section-title">Pendapatan Sewa</div>
+      <div class="field">
+        <label>Model Rental</label>
+        <select id="f-rmodel" onchange="onRModelChange()">
+          <option value="nightly">Per Malam — short-term / Airbnb / villa</option>
+          <option value="monthly">Per Bulan — long-term / kost</option>
+        </select>
+      </div>
+      <div id="nightly-wrap">
+        <div class="field-row">
+          <div class="field"><label>Rate / Malam</label><input type="text" id="f-nrate"></div>
+          <div class="field"><label>Occupancy (%)</label><input type="number" id="f-nocc" min="0" max="100"></div>
+        </div>
+      </div>
+      <div id="monthly-wrap" style="display:none">
+        <div class="field-row">
+          <div class="field"><label>Rate / Bulan</label><input type="text" id="f-mrate"></div>
+          <div class="field"><label>Occupancy (%)</label><input type="number" id="f-mocc" min="0" max="100"></div>
+        </div>
+      </div>
+      <div class="field"><label>Property Management Fee (% dari sewa)</label><input type="number" id="f-pmgmt" min="0" max="50" step="0.5"></div>
+      <div class="field">
+        <label>Pendapatan Sewa Bruto / Tahun (auto)</label>
+        <div class="field-auto" id="a-rental">—</div>
+        <div class="field-auto-sub" id="a-rental-sub">—</div>
+      </div>
+      <div class="field">
+        <label>Pendapatan Sewa Neto / Tahun (auto)</label>
+        <div class="field-auto" id="a-rental-net">—</div>
+        <div class="field-auto-sub" id="a-rental-net-sub">—</div>
+      </div>
+      <div class="field">
+        <label>Total Sewa Sepanjang Lease (auto)</label>
+        <div class="field-auto" id="a-rental-total">—</div>
+        <div class="field-auto-sub" id="a-rental-total-sub">—</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right: Results ── -->
+  <div class="panel-right">
+    <div class="right-tabs">
+      <div class="rtab active" data-tab="summary">Ringkasan</div>
+      <div class="rtab" data-tab="sell">Simulasi Jual</div>
+      <div class="rtab" data-tab="rent">Simulasi Sewa</div>
+      <div class="rtab" data-tab="hold">Hold &amp; Jual</div>
+      <div class="rtab" data-tab="compare">Bandingkan Sesi</div>
+    </div>
+
+    <div class="right-content">
+
+      <div id="tab-summary" class="tab-pane active">
+        <div class="summary-grid" id="summary-cards"></div>
+        <div class="chart-box">
+          <div class="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
+          <div class="chart-wrap"><canvas id="chart-overview"></canvas></div>
+        </div>
+      </div>
+
+      <div id="tab-sell" class="tab-pane">
+        <div class="tab-controls">
+          <label>Mode Konstruksi:</label>
+          <select id="f-sellmode" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;font-family:inherit;outline:none;min-width:240px">
+            <option value="upfront">Bangun Semua di Tahun 0</option>
+            <option value="presale">Show Unit + Presale (build per sale)</option>
+          </select>
+          <label>Unit terjual / tahun:</label>
+          <input type="number" id="f-upy" min="1">
+          <span class="dim" id="sellmode-hint" style="font-size:11px;flex-basis:100%;margin-top:4px">—</span>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Cash Flow Penjualan Bertahap</div>
+          <div class="chart-wrap"><canvas id="chart-sell"></canvas></div>
+        </div>
+        <div class="chart-box"><div id="sell-table"></div></div>
+      </div>
+
+      <div id="tab-rent" class="tab-pane">
+        <div class="chart-box">
+          <div class="chart-title" id="rent-title">Cash Flow Sewa Tahunan</div>
+          <div class="chart-wrap"><canvas id="chart-rent"></canvas></div>
+        </div>
+        <div class="chart-box"><div id="rent-table"></div></div>
+      </div>
+
+      <div id="tab-hold" class="tab-pane">
+        <div class="tab-controls">
+          <label>Hold &amp; sewa selama:</label>
+          <input type="number" id="f-hyears" min="1" max="10">
+          <span class="dim" style="font-size:11px">tahun, lalu jual semua unit di tahun berikutnya</span>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title" id="hold-title">Hold &amp; Jual — Skenario</div>
+          <div class="chart-wrap"><canvas id="chart-hold"></canvas></div>
+        </div>
+        <div class="chart-box"><div id="hold-table"></div></div>
+        <div class="result-box" id="hold-summary"></div>
+      </div>
+
+      <div id="tab-compare" class="tab-pane">
+        <div class="chart-box"><div id="compare-table"></div></div>
+        <div class="chart-box">
+          <div class="chart-title">Cash Flow — Hold &amp; Jual (Semua Sesi)</div>
+          <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal ── -->
+<div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <h3 id="modal-title">Nama Sesi</h3>
+    <input type="text" id="modal-input" placeholder="Canggu Villa A">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-confirm" onclick="confirmModal()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Helpers ──
+const idr = n => isFinite(n) && !isNaN(n)
+  ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n)
+  : '—';
+const pct = n => isFinite(n) && !isNaN(n) ? n.toFixed(1)+'%' : '—';
+const yrs = n => isFinite(n) && !isNaN(n) ? n.toFixed(1)+' thn' : '∞';
+const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+const fmtRaw = n => n ? new Intl.NumberFormat('id-ID').format(n) : '0';
+const parseRaw = s => parseInt(String(s).replace(/\D/g,''),10)||0;
+const abbr = n => {
+  const a=Math.abs(n);
+  if(a>=1e12) return (n/1e12).toFixed(1)+' T';
+  if(a>=1e9)  return (n/1e9).toFixed(1)+' M';
+  if(a>=1e6)  return (n/1e6).toFixed(1)+' Jt';
+  return fmtRaw(n);
+};
+
+// ── State ──
+const SK = 'bali_inv_v4';
+let sessions=[], currentId=null, charts={}, activeTab='summary', modalCb=null;
+
+function defSession(name){
+  return {
+    id: Date.now()+Math.random(), name: name||'Proyek Baru',
+    land:2000, pricePerSqm:1500000, years:25,
+    terms:'upfront', dp:30, tenor:3,
+    units:4, usize:120, buildPerUnit:800000000, misc:200000000,
+    agentBuy:0, ffe:0, opex:5,
+    margin:30, agentSell:5,
+    rmodel:'nightly', nrate:2500000, nocc:70, mrate:15000000, mocc:90,
+    pmgmt:15,
+    upy:2, holdYears:1,
+    sellMode:'upfront', fxRate:16000
+  };
+}
+
+const usd = (n,r) => {
+  if(!isFinite(n)||isNaN(n)||!r) return '—';
+  const v = n/r;
+  const abs = Math.abs(v);
+  if(abs>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
+  if(abs>=1e3) return '$'+(v/1e3).toFixed(1)+'K';
+  return '$'+v.toFixed(0);
+};
+
+function loadData(){
+  try{
+    const d=JSON.parse(localStorage.getItem(SK)||'{}');
+    sessions=d.sessions||[]; currentId=d.current||null;
+  }catch(e){sessions=[];currentId=null;}
+  if(!sessions.length){ const s=defSession('Proyek Pertama'); sessions=[s]; currentId=s.id; }
+  if(!sessions.find(s=>s.id==currentId)) currentId=sessions[0].id;
+  // backfill any missing fields for older sessions
+  sessions.forEach(s=>{ const d=defSession(); Object.keys(d).forEach(k=>{ if(s[k]===undefined) s[k]=d[k]; }); });
+}
+
+function saveData(){ localStorage.setItem(SK,JSON.stringify({sessions,current:currentId})); }
+function getS(){ return sessions.find(s=>s.id==currentId)||sessions[0]; }
+
+// ── Session Ops ──
+function newSession(){
+  openModal('Sesi Baru','Proyek Baru',name=>{
+    const s=defSession(name); sessions.push(s); currentId=s.id;
+    saveData(); renderAll(true);
+  });
+}
+function deleteSession(){
+  if(sessions.length<=1){alert('Minimal 1 sesi harus ada.');return;}
+  if(!confirm(`Hapus sesi "${getS().name}"?`))return;
+  sessions=sessions.filter(s=>s.id!=currentId);
+  currentId=sessions[0].id;
+  saveData(); renderAll(true);
+}
+function switchSession(id){ currentId=id; saveData(); renderAll(true); }
+function renameSession(id){
+  const s=sessions.find(x=>x.id==id); if(!s) return;
+  openModal('Ganti Nama Sesi',s.name,name=>{ s.name=name; saveData(); renderAll(false); });
+}
+
+// ── Modal ──
+function openModal(title,def,cb){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-input').value=def||'';
+  modalCb=cb;
+  document.getElementById('modal').style.display='flex';
+  setTimeout(()=>document.getElementById('modal-input').focus(),50);
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; modalCb=null; }
+function confirmModal(){
+  const v=document.getElementById('modal-input').value.trim()||'Proyek Baru';
+  if(modalCb)modalCb(v); closeModal();
+}
+document.getElementById('modal-input').addEventListener('keydown',e=>{ if(e.key==='Enter')confirmModal(); });
+
+// ── Calculations ──
+function calc(s){
+  const leasehold = s.land * s.pricePerSqm * s.years;
+  const build     = s.units * s.buildPerUnit;
+  const upfrontExtras = (s.misc||0) + (s.agentBuy||0) + (s.ffe||0);
+  const total     = leasehold + build + upfrontExtras;
+  const landPU    = leasehold / (s.units||1);
+  const extrasPU  = upfrontExtras / (s.units||1);
+  const costPU    = landPU + s.buildPerUnit + extrasPU;
+  const sellPU    = costPU * (1 + s.margin/100);
+  const totalSell = sellPU * s.units;
+  const sellComm  = totalSell * ((s.agentSell||0)/100);
+  const netSell   = totalSell - sellComm;
+  const profit    = netSell - total;
+  const opex      = total * (s.opex/100);
+  const rentalGross = s.rmodel==='nightly'
+    ? s.nrate * 365 * (s.nocc/100) * s.units
+    : s.mrate * 12  * (s.mocc/100) * s.units;
+  const pmgmtFee  = rentalGross * ((s.pmgmt||0)/100);
+  const rental    = rentalGross - pmgmtFee;
+  const netRental = rental - opex;
+  const yield_    = total>0 ? (rental/total)*100 : 0;
+  const pbRent    = netRental>0 ? total/netRental : Infinity;
+  const dpAmt     = s.terms==='installment' ? leasehold*(s.dp/100) : leasehold;
+  const remaining = leasehold - dpAmt;
+  const annualI   = s.tenor>0 ? remaining/s.tenor : 0;
+  const N         = s.holdYears||1;
+  const holdNet   = N*netRental + netSell - total;
+  const holdROI   = total>0 ? (holdNet/total)*100 : 0;
+  return {leasehold,build,upfrontExtras,total,landPU,extrasPU,costPU,sellPU,totalSell,
+          sellComm,netSell,profit,opex,rentalGross,pmgmtFee,rental,netRental,
+          yield_,pbRent,dpAmt,remaining,annualI,N,holdNet,holdROI};
+}
+
+function cfSell(s,c){
+  const out=[]; let cum=0;
+  const sellNetPerUnit = c.sellPU * (1 - (s.agentSell||0)/100);
+  const presale = s.sellMode==='presale';
+  // Year-0 cash out
+  let initOut;
+  if(presale){
+    // Land + 1 show unit + extras (only)
+    const landPaid = s.terms==='installment' ? c.dpAmt : c.leasehold;
+    initOut = landPaid + s.buildPerUnit + c.upfrontExtras;
+  } else {
+    initOut = s.terms==='installment' ? c.dpAmt + s.units*s.buildPerUnit + c.upfrontExtras : c.total;
+  }
+  let unitsLeft = s.units;
+  let unitsBuilt = presale ? 1 : s.units; // show unit already built in presale mode
+  for(let yr=0;yr<=10;yr++){
+    let ci=0,co=0,sold=0,built=0;
+    if(yr===0) co=initOut;
+    else {
+      sold = Math.max(0, Math.min(s.upy||1, unitsLeft));
+      ci = sold * sellNetPerUnit;
+      unitsLeft -= sold;
+      // Presale: build the units we just sold (minus any already built — show unit counts toward inventory)
+      if(presale){
+        const needBuild = Math.max(0, sold - Math.max(0, unitsBuilt - (s.units - unitsLeft - sold)));
+        built = Math.max(0, sold - Math.max(0, unitsBuilt - (s.units - unitsLeft)));
+        // Simpler: total built so far should equal s.units - unitsLeft (sold) at end. Build to catch up.
+        const target = s.units - unitsLeft; // must be built by end of year
+        built = Math.max(0, target - unitsBuilt);
+        unitsBuilt += built;
+        co += built * s.buildPerUnit;
+      }
+      if(s.terms==='installment'&&yr<=s.tenor) co+=c.annualI;
+    }
+    cum+=ci-co; out.push({yr,ci,co,net:ci-co,cum,sold,built});
+  }
+  return out;
+}
+function cfRent(s,c){
+  const out=[]; let cum=0;
+  const horizon = Math.min(Math.max(s.years||10, 5), 20);
+  const initOut = s.terms==='installment' ? c.dpAmt + s.units*s.buildPerUnit + c.upfrontExtras : c.total;
+  for(let yr=0;yr<=horizon;yr++){
+    let ci=0,co=0;
+    if(yr===0) co=initOut;
+    else { ci=c.rental; co=c.opex; if(s.terms==='installment'&&yr<=s.tenor) co+=c.annualI; }
+    cum+=ci-co; out.push({yr,ci,co,net:ci-co,cum});
+  }
+  return out;
+}
+function cfHold(s,c){
+  const N=c.N;
+  const rows=[{yr:0,ci:0,co:c.total,net:-c.total,cum:-c.total,label:'Tahun 0 — Investasi'}];
+  let cum=-c.total;
+  for(let yr=1;yr<=N;yr++){
+    cum+=c.netRental;
+    rows.push({yr,ci:c.rental,co:c.opex,net:c.netRental,cum,label:`Tahun ${yr} — Sewa`});
+  }
+  cum+=c.netSell;
+  rows.push({yr:N+1,ci:c.netSell,co:0,net:c.netSell,cum,label:`Tahun ${N+1} — Jual Semua Unit`});
+  return rows;
+}
+function holdLine(s,c){
+  let cum=-c.total; const out=[cum];
+  for(let yr=1;yr<=10;yr++){
+    if(yr<=c.N) cum+=c.netRental;
+    else if(yr===c.N+1) cum+=c.netSell;
+    out.push(cum);
+  }
+  return out;
+}
+
+// ── Tabs ──
+function switchTab(name){
+  activeTab=name;
+  document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.rtab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.rtab').forEach(el=>{ if(el.dataset.tab===name)el.classList.add('active'); });
+  renderTab();
+}
+document.querySelectorAll('.rtab').forEach(el=>el.addEventListener('click',()=>switchTab(el.dataset.tab)));
+
+// ── Inputs ──
+const FIELDS=[
+  ['f-land','land','num'],['f-years','years','num'],['f-price-sqm','pricePerSqm','idr'],
+  ['f-terms','terms','str'],['f-dp','dp','num'],['f-tenor','tenor','num'],
+  ['f-units','units','num'],['f-usize','usize','num'],['f-build','buildPerUnit','idr'],
+  ['f-misc','misc','idr'],['f-agentbuy','agentBuy','idr'],['f-ffe','ffe','idr'],
+  ['f-opex','opex','num'],['f-margin','margin','num'],['f-agentsell','agentSell','num'],
+  ['f-rmodel','rmodel','str'],['f-nrate','nrate','idr'],['f-nocc','nocc','num'],
+  ['f-mrate','mrate','idr'],['f-mocc','mocc','num'],['f-pmgmt','pmgmt','num'],
+  ['f-upy','upy','num'],['f-hyears','holdYears','num'],
+  ['f-sellmode','sellMode','str'],['f-fx','fxRate','idr'],
+];
+
+function bindInputs(){
+  FIELDS.forEach(([id,key,type])=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.addEventListener('input',()=>{
+      const s=getS();
+      if(type==='num') s[key]=parseFloat(el.value)||0;
+      else if(type==='idr') s[key]=parseRaw(el.value);
+      else s[key]=el.value;
+      if(id==='f-margin') updateSlider(el.value);
+      saveData(); renderAll(false);
+    });
+    if(type==='idr'){
+      el.addEventListener('focus',()=>{ el.value=getS()[key]||0; });
+      el.addEventListener('blur',()=>{ el.value=fmtRaw(getS()[key]); });
+    }
+  });
+}
+
+function updateSlider(v){
+  const pctVal=parseInt(v)||30;
+  document.getElementById('margin-display').textContent=pctVal+'%';
+  const sl=document.getElementById('f-margin');
+  const ratio=((pctVal-5)/(150-5))*100;
+  sl.style.background=`linear-gradient(to right, var(--amber) ${ratio}%, var(--border) ${ratio}%)`;
+}
+
+function onTermsChange(){ const v=document.getElementById('f-terms').value; document.getElementById('installment-wrap').style.display=v==='installment'?'block':'none'; }
+function onRModelChange(){ const v=document.getElementById('f-rmodel').value; document.getElementById('nightly-wrap').style.display=v==='nightly'?'block':'none'; document.getElementById('monthly-wrap').style.display=v==='monthly'?'block':'none'; }
+
+function populate(s){
+  const sv=(id,v)=>{ const el=document.getElementById(id); if(el)el.value=v; };
+  sv('f-land',s.land); sv('f-years',s.years);
+  document.getElementById('f-price-sqm').value=fmtRaw(s.pricePerSqm);
+  sv('f-terms',s.terms); sv('f-dp',s.dp); sv('f-tenor',s.tenor);
+  sv('f-units',s.units); sv('f-usize',s.usize);
+  document.getElementById('f-build').value=fmtRaw(s.buildPerUnit);
+  document.getElementById('f-misc').value=fmtRaw(s.misc);
+  document.getElementById('f-agentbuy').value=fmtRaw(s.agentBuy);
+  document.getElementById('f-ffe').value=fmtRaw(s.ffe);
+  sv('f-opex',s.opex); sv('f-margin',s.margin); updateSlider(s.margin);
+  sv('f-agentsell',s.agentSell);
+  sv('f-rmodel',s.rmodel);
+  document.getElementById('f-nrate').value=fmtRaw(s.nrate);
+  sv('f-nocc',s.nocc);
+  document.getElementById('f-mrate').value=fmtRaw(s.mrate);
+  sv('f-mocc',s.mocc); sv('f-pmgmt',s.pmgmt);
+  sv('f-upy',s.upy); sv('f-hyears',s.holdYears);
+  sv('f-sellmode',s.sellMode||'upfront');
+  document.getElementById('f-fx').value=fmtRaw(s.fxRate||16000);
+  onTermsChange(); onRModelChange();
+}
+
+// Fetch live USD/IDR rate (auto on boot, manual via refresh button)
+async function refreshFX(manual=false){
+  const btn = document.getElementById('fx-refresh-btn');
+  if(btn) btn.classList.add('spin');
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store'});
+    const d = await r.json();
+    if(d && d.rates && d.rates.IDR){
+      const rate = Math.round(d.rates.IDR);
+      const s = getS();
+      s.fxRate = rate;
+      saveData();
+      const fxIn = document.getElementById('f-fx');
+      if(fxIn) fxIn.value = fmtRaw(rate);
+      renderAll(false);
+    }
+  } catch(e) { if(manual) alert('Gagal fetch kurs. Cek koneksi internet.'); }
+  finally { setTimeout(()=>{ if(btn) btn.classList.remove('spin'); }, 600); }
+}
+
+const idrUsd = (v, r) => `<div class="amt">${idr(v)}</div><div class="usd">≈ ${usd(v, r)}</div>`;
+const setHtml = (id, h) => { const el = document.getElementById(id); if(el) el.innerHTML = h; };
+
+// ── Render ──
+function renderAll(repop=true){
+  const s=getS(); if(repop) populate(s);
+  const c=calc(s);
+  renderAuto(s,c); renderPills(); renderTab();
+}
+
+function renderAuto(s,c){
+  const r = s.fxRate||16000;
+  setHtml('a-leasehold', idrUsd(c.leasehold, r));
+  set('a-leasehold-sub',`${fmtRaw(s.land)} m² × ${s.years} thn × ${idr(s.pricePerSqm)}`);
+  setHtml('a-build', idrUsd(c.build, r));
+  set('a-build-sub',`${s.units} unit × ${idr(s.buildPerUnit)}`);
+  setHtml('a-cpu', idrUsd(c.costPU, r));
+  set('a-cpu-sub',`Tanah ${idr(c.landPU)} + Bangun ${idr(s.buildPerUnit)} + Extras ${idr(c.extrasPU)}`);
+  const sellNetPU = c.sellPU * (1 - (s.agentSell||0)/100);
+  setHtml('a-sell', idrUsd(c.sellPU, r));
+  set('a-sell-sub',`Net setelah komisi ${s.agentSell||0}%: ${idr(sellNetPU)}/unit · Total ${idr(c.netSell)}`);
+  const rsub=s.rmodel==='nightly'
+    ? `${idr(s.nrate)} × 365 × ${s.nocc}% × ${s.units} unit`
+    : `${idr(s.mrate)} × 12 × ${s.mocc}% × ${s.units} unit`;
+  setHtml('a-rental', idrUsd(c.rentalGross, r)); set('a-rental-sub',rsub);
+  setHtml('a-rental-net', idrUsd(c.rental, r));
+  set('a-rental-net-sub',`Setelah ${s.pmgmt||0}% mgmt fee (−${idr(c.pmgmtFee)})`);
+  const totalLease = c.rental * (s.years||1);
+  setHtml('a-rental-total', idrUsd(totalLease, r));
+  set('a-rental-total-sub',`${idr(c.rental)}/thn × ${s.years} thn lease`);
+  if(s.terms==='installment'){
+    setHtml('a-dp', idrUsd(c.dpAmt, r));
+    setHtml('a-install', `<div class="amt">${idr(c.annualI)}/thn</div><div class="usd">≈ ${usd(c.annualI, r)}/yr</div>`);
+  }
+  // Update margin sell-result with USD line
+  const sellSub = document.getElementById('a-sell-sub');
+  // also append USD for sell price in margin block
+  const a = document.getElementById('a-sell');
+  // (a is already updated via idrUsd above)
+}
+
+function renderPills(){
+  document.getElementById('session-pills').innerHTML=sessions.map(s=>`
+    <div class="pill ${s.id==currentId?'active':'inactive'}" onclick="switchSession('${s.id}')">
+      <span>${escapeHtml(s.name)}</span>
+      <span class="session-edit" onclick="event.stopPropagation();renameSession('${s.id}')" title="Ganti nama">✎</span>
+    </div>`).join('');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderTab(){
+  const s=getS(), c=calc(s);
+  if(activeTab==='summary') renderSummary(s,c);
+  else if(activeTab==='sell') renderSell(s,c);
+  else if(activeTab==='rent') renderRent(s,c);
+  else if(activeTab==='hold') renderHold(s,c);
+  else if(activeTab==='compare') renderCompare();
+}
+
+// ── Charts ──
+function mkChart(id,config){
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const cv=document.getElementById(id); if(!cv)return;
+  Chart.defaults.color='#475569';
+  Chart.defaults.font.family="'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  Chart.defaults.font.size=11;
+  charts[id]=new Chart(cv, {...config, options:{...(config.options||{}), maintainAspectRatio:false, responsive:true}});
+}
+const gridColor='#f1f5f9';
+function baseOpts(){
+  return {
+    plugins:{
+      legend:{labels:{color:'#475569',padding:14,font:{size:12,weight:'600'},usePointStyle:true,pointStyle:'circle'}},
+      tooltip:{
+        backgroundColor:'#ffffff', titleColor:'#0f172a', bodyColor:'#475569',
+        borderColor:'#e5e7eb', borderWidth:1, padding:10, cornerRadius:8,
+        bodyFont:{family:"'Inter',sans-serif"},
+        callbacks:{label:ctx=>` ${ctx.dataset.label}: ${idr(ctx.parsed.y)}`}
+      }
+    },
+    scales:{
+      x:{grid:{color:gridColor,display:false},border:{display:false},ticks:{color:'#94a3b8'}},
+      y:{grid:{color:gridColor},border:{display:false},ticks:{color:'#94a3b8',callback:v=>'Rp '+abbr(v)}}
+    }
+  };
+}
+
+// ── Tab Renderers ──
+function renderSummary(s,c){
+  const r = s.fxRate||16000;
+  const lp=c.total>0?(c.leasehold/c.total*100).toFixed(0):0;
+  const bp=c.total>0?(c.build/c.total*100).toFixed(0):0;
+  const ep=c.total>0?(c.upfrontExtras/c.total*100).toFixed(0):0;
+  const card = (label, valHtml, valColor, sub) =>
+    `<div class="summary-card"><div class="card-label">${label}</div><div class="card-value ${valColor}">${valHtml}</div><div class="usd">≈ ${''}</div><div class="card-sub">${sub}</div></div>`;
+  const cardWithUsd = (label, valIdr, valUsd, valColor, sub) =>
+    `<div class="summary-card">
+      <div class="card-label">${label}</div>
+      <div class="card-value ${valColor}">${valIdr}</div>
+      <div class="usd">≈ ${valUsd}</div>
+      <div class="card-sub">${sub}</div>
+    </div>`;
+  const cardPlain = (label, val, valColor, sub) =>
+    `<div class="summary-card">
+      <div class="card-label">${label}</div>
+      <div class="card-value ${valColor}">${val}</div>
+      <div class="card-sub">${sub}</div>
+    </div>`;
+  const grossProfit = c.totalSell - c.total;
+  const grossROI = c.total>0 ? (grossProfit/c.total)*100 : 0;
+  const netROI = c.total>0 ? (c.profit/c.total)*100 : 0;
+  const totalLeaseRental = c.rental * (s.years||1);
+  const totalLeaseROI = c.total>0 ? (totalLeaseRental/c.total)*100 : 0;
+  const cardWithRoi = (label, valIdr, valUsd, valColor, roi, roiColor, sub) =>
+    `<div class="summary-card">
+      <div class="card-label">${label}</div>
+      <div class="card-value ${valColor}">${valIdr}</div>
+      <div class="usd">≈ ${valUsd}</div>
+      <div class="roi-pill ${roiColor}">ROI ${pct(roi)}</div>
+      <div class="card-sub">${sub}</div>
+    </div>`;
+  document.getElementById('summary-cards').innerHTML=
+    cardWithUsd('Total Investasi', idr(c.total), usd(c.total,r), 'green', `Leasehold ${lp}% · Bangun ${bp}% · Extras ${ep}%`)+
+    cardWithUsd('Biaya / Unit', idr(c.costPU), usd(c.costPU,r), 'purple', `${s.units} unit total`)+
+    cardWithUsd('Harga Jual / Unit', idr(c.sellPU), usd(c.sellPU,r), 'amber', `Margin ${s.margin}% · komisi ${s.agentSell||0}%`)+
+    cardWithUsd('Total Revenue (Jual Semua)', idr(c.totalSell), usd(c.totalSell,r), 'amber', `${s.units} unit × ${idr(c.sellPU)} (sebelum komisi)`)+
+    cardWithRoi('Gross Profit (Jual)', idr(grossProfit), usd(grossProfit,r), grossProfit>=0?'green':'red', grossROI, grossROI>=0?'green':'red', `Revenue − Investasi (sebelum komisi)`)+
+    cardWithRoi('Net Profit (Jual)', idr(c.profit), usd(c.profit,r), c.profit>=0?'green':'red', netROI, netROI>=0?'green':'red', `Revenue ${idr(c.totalSell)} − Komisi ${idr(c.sellComm)} − Investasi ${idr(c.total)}`)+
+    cardWithRoi('Sewa Neto / Tahun', idr(c.rental), usd(c.rental,r), 'blue', c.yield_, 'blue', `${s.rmodel==='nightly'?s.nocc:s.mocc}% occ. · yield tahunan`)+
+    cardWithRoi(`Sewa Total Sepanjang ${s.years} Thn`, idr(totalLeaseRental), usd(totalLeaseRental,r), 'blue', totalLeaseROI, totalLeaseROI>=0?'green':'red', `${idr(c.rental)}/thn × ${s.years} thn (asumsi occupancy konstan)`)+
+    cardWithRoi(`Hold ${c.N}yr → Jual`, idr(c.holdNet), usd(c.holdNet,r), c.holdNet>=0?'green':'red', c.holdROI, c.holdROI>=0?'green':'red', `${c.N} thn sewa + jual semua di Thn ${c.N+1}`);
+  const labels=Array.from({length:11},(_,i)=>'Thn '+i);
+  mkChart('chart-overview',{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Jual Bertahap',data:cfSell(s,c).map(d=>d.cum),borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2},
+      {label:'Sewa Saja',data:cfRent(s,c).map(d=>d.cum),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2},
+      {label:`Hold ${c.N}yr → Jual`,data:holdLine(s,c),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2},
+    ]},
+    options:baseOpts()
+  });
+}
+
+function renderSell(s,c){
+  const flow=cfSell(s,c);
+  const presale = s.sellMode==='presale';
+  const initOut = flow[0].co;
+  const r = s.fxRate||16000;
+  const totalSold = flow.reduce((a,d)=>a+(d.sold||0),0);
+  const yearsToSell = flow.findIndex(d=>d.cum>=0 && d.yr>0);
+  const hint = presale
+    ? `Tahun 0: bayar tanah + bangun 1 show unit + extras = ${idr(initOut)} (${usd(initOut,r)}). Tahun 1+: tiap unit dijual baru dibangun. <b>Total ${s.units} unit, target ${s.upy}/thn → habis terjual di Tahun ${Math.ceil(s.units/(s.upy||1))}.</b>`
+    : `Tahun 0: bangun semua ${s.units} unit upfront = ${idr(initOut)} (${usd(initOut,r)}). Tahun 1+: hanya pendapatan penjualan. <b>Total ${s.units} unit, target ${s.upy}/thn → habis terjual di Tahun ${Math.ceil(s.units/(s.upy||1))}.</b>`;
+  document.getElementById('sellmode-hint').innerHTML = hint;
+
+  const labels=flow.map(d=>'Thn '+d.yr);
+  mkChart('chart-sell',{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Cash In',data:flow.map(d=>d.ci),backgroundColor:'rgba(5,150,105,.7)',borderColor:'#059669',borderWidth:1,borderRadius:4},
+      {label:'Cash Out',data:flow.map(d=>-d.co),backgroundColor:'rgba(220,38,38,.7)',borderColor:'#dc2626',borderWidth:1,borderRadius:4},
+      {label:'Kumulatif',data:flow.map(d=>d.cum),type:'line',borderColor:'#d97706',backgroundColor:'transparent',tension:.3,pointRadius:4,borderWidth:2.5},
+    ]},
+    options:baseOpts()
+  });
+
+  // Custom table with Sold/Built columns when presale
+  const heads = presale
+    ? ['Tahun','Unit Dijual','Unit Dibangun','Cash In (Jual)','Cash Out (Bangun + Cicilan)','Net','Kumulatif']
+    : ['Tahun','Unit Dijual','Cash In','Cash Out','Net','Kumulatif'];
+  const rows = flow.map(d=>{
+    if(presale){
+      return `<tr>
+        <td class="dim">Tahun ${d.yr}</td>
+        <td>${d.sold||0}</td>
+        <td>${d.yr===0?1:(d.built||0)}</td>
+        <td class="pos">${d.ci>0?idr(d.ci):'—'}</td>
+        <td class="neg">${d.co>0?idr(d.co):'—'}</td>
+        <td class="${d.net>=0?'pos':'neg'}">${idr(d.net)}</td>
+        <td class="${d.cum>=0?'pos':'neg'}">${idr(d.cum)}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="dim">Tahun ${d.yr}</td>
+      <td>${d.sold||0}</td>
+      <td class="pos">${d.ci>0?idr(d.ci):'—'}</td>
+      <td class="neg">${d.co>0?idr(d.co):'—'}</td>
+      <td class="${d.net>=0?'pos':'neg'}">${idr(d.net)}</td>
+      <td class="${d.cum>=0?'pos':'neg'}">${idr(d.cum)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('sell-table').innerHTML = `<table class="sim-table">
+    <thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderRent(s,c){
+  const flow=cfRent(s,c);
+  const horizon=flow.length-1;
+  document.getElementById('rent-title').textContent=`Cash Flow Sewa Tahunan — ${horizon} Tahun (Yield ${pct(c.yield_)})`;
+  mkChart('chart-rent',{
+    type:'line',
+    data:{labels:flow.map(d=>'Thn '+d.yr),datasets:[
+      {label:'Kumulatif Cash Flow',data:flow.map(d=>d.cum),borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2},
+      {label:'Net Sewa / Thn',data:flow.map(d=>d.net),borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,borderDash:[5,4]},
+    ]},
+    options:baseOpts()
+  });
+  document.getElementById('rent-table').innerHTML=simTable(flow,['Tahun','Pendapatan Sewa','OpEx','Net','Kumulatif']);
+}
+
+function renderHold(s,c){
+  document.getElementById('hold-title').textContent=`Hold ${c.N} Tahun → Jual di Tahun ke-${c.N+1}`;
+  const flow=cfHold(s,c);
+  const labels=flow.map(d=>d.label);
+  mkChart('chart-hold',{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Cash In',data:flow.map(d=>d.ci),backgroundColor:'rgba(5,150,105,.7)',borderColor:'#059669',borderWidth:1,borderRadius:4},
+        {label:'Cash Out',data:flow.map(d=>-d.co),backgroundColor:'rgba(220,38,38,.7)',borderColor:'#dc2626',borderWidth:1,borderRadius:4},
+        {label:'Kumulatif',data:flow.map(d=>d.cum),type:'line',borderColor:'#d97706',backgroundColor:'transparent',tension:0,pointRadius:6,borderWidth:2.5},
+      ]
+    },
+    options:baseOpts()
+  });
+  document.getElementById('hold-table').innerHTML=`
+    <table class="sim-table">
+      <thead><tr><th>Periode</th><th>Cash Out</th><th>Cash In</th><th>Net</th><th>Kumulatif</th></tr></thead>
+      <tbody>
+        ${flow.map(d=>`<tr>
+          <td class="dim">${d.label}</td>
+          <td class="neg">${d.co>0?idr(d.co):'—'}</td>
+          <td class="pos">${d.ci>0?idr(d.ci):'—'}</td>
+          <td class="${d.net>=0?'pos':'neg'}">${idr(d.net)}</td>
+          <td class="${d.cum>=0?'pos':'neg'}">${idr(d.cum)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  const r = s.fxRate||16000;
+  document.getElementById('hold-summary').innerHTML=`
+    <div class="result-item"><div class="rl">Total Keuntungan Bersih</div><div class="rv ${c.holdNet>=0?'green':'red'}">${idr(c.holdNet)}</div><div class="usd">≈ ${usd(c.holdNet,r)}</div></div>
+    <div class="result-item"><div class="rl">ROI Total</div><div class="rv ${c.holdROI>=0?'green':'red'}">${pct(c.holdROI)}</div><div class="usd">${c.N} thn hold + 1 thn jual</div></div>
+    <div class="result-item"><div class="rl">Payback Period</div><div class="rv blue">${c.N+1} Tahun</div><div class="usd">Setelah jual semua unit</div></div>
+    <div class="result-item"><div class="rl">Total Investasi Awal</div><div class="rv indigo">${idr(c.total)}</div><div class="usd">≈ ${usd(c.total,r)}</div></div>
+  `;
+}
+
+function renderCompare(){
+  const metrics=[
+    {key:'total',     label:'Total Investasi',         fmt:idr, best:'min'},
+    {key:'costPU',    label:'Biaya / Unit',             fmt:idr, best:'min'},
+    {key:'sellPU',    label:'Harga Jual / Unit',        fmt:idr, best:'max'},
+    {key:'totalSell', label:'Total Revenue (Jual)',     fmt:idr, best:'max'},
+    {key:'profit',    label:'Gross Profit (Jual)',      fmt:idr, best:'max'},
+    {key:'yield_',    label:'Rental Yield / Tahun',     fmt:pct, best:'max'},
+    {key:'rental',    label:'Pendapatan Sewa / Tahun',  fmt:idr, best:'max'},
+    {key:'pbRent',    label:'Payback Sewa',             fmt:yrs, best:'min'},
+    {key:'holdROI',   label:'Hold & Jual ROI',          fmt:pct, best:'max'},
+    {key:'holdNet',   label:'Hold & Jual Net Profit',   fmt:idr, best:'max'},
+  ];
+  const pairs=sessions.map(s=>({s,c:calc(s)}));
+  const header=`<tr><th style="min-width:200px">Metrik</th>${sessions.map(s=>`<th style="color:var(--purple);font-weight:700">${escapeHtml(s.name)}</th>`).join('')}</tr>`;
+  const rows=metrics.map(m=>{
+    const vals=pairs.map(({c})=>c[m.key]);
+    const finite=vals.filter(isFinite);
+    if(!finite.length) return '';
+    const best=m.best==='max'?Math.max(...finite):Math.min(...finite);
+    return `<tr><td class="metric-name">${m.label}</td>${pairs.map(({c})=>{
+      const v=c[m.key];
+      const b=isFinite(v)&&v===best&&sessions.length>1;
+      return `<td class="${b?'best':''}">${m.fmt(v)}</td>`;
+    }).join('')}</tr>`;
+  }).join('');
+  document.getElementById('compare-table').innerHTML=`<table class="compare-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
+
+  const colors=['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#2563eb','#db2777','#0891b2'];
+  const maxN=Math.max(...sessions.map(s=>s.holdYears||1));
+  const labels=Array.from({length:maxN+2},(_,i)=>'Thn '+i);
+  mkChart('chart-compare',{
+    type:'line',
+    data:{
+      labels,
+      datasets:sessions.map((s,i)=>{
+        const c=calc(s);
+        return {
+          label:s.name,
+          data:Array.from({length:maxN+2},(_,yr)=>{
+            if(yr===0) return -c.total;
+            if(yr<=c.N) return -c.total + yr*c.netRental;
+            if(yr===c.N+1) return -c.total + c.N*c.netRental + c.totalSell;
+            return -c.total + c.N*c.netRental + c.totalSell;
+          }),
+          borderColor:colors[i%colors.length],
+          backgroundColor:'transparent',
+          tension:.2,
+          pointRadius:5,
+          borderWidth:2.5
+        };
+      })
+    },
+    options:baseOpts()
+  });
+}
+
+function simTable(flow,heads){
+  return `<table class="sim-table">
+    <thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${flow.map(d=>`<tr>
+      <td class="dim">Tahun ${d.yr}</td>
+      <td class="pos">${d.ci>0?idr(d.ci):'—'}</td>
+      <td class="neg">${d.co>0?idr(d.co):'—'}</td>
+      <td class="${d.net>=0?'pos':'neg'}">${idr(d.net)}</td>
+      <td class="${d.cum>=0?'pos':'neg'}">${idr(d.cum)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── Boot ──
+loadData();
+bindInputs();
+renderAll(true);
+refreshFX(false); // auto-fetch live USD/IDR on load
+</script>
+</body>
+</html>
