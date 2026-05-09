@@ -6,16 +6,23 @@ import { fmtIdr, fmtUsd, pct, cfSell, cfRent } from "@/lib/calc";
 
 interface Props { s: SessionData; c: CalcResult; }
 
-function SCard({ label, value, cls, usd, roi, roiCls, sub }: {
+function SCard({ label, value, cls, usd, roi, roiCls, roi2, roi2Label, roi2Cls, sub }: {
   label: string; value: string; cls?: string; usd?: string;
-  roi?: string; roiCls?: string; sub?: string;
+  roi?: string; roiCls?: string;
+  roi2?: string; roi2Label?: string; roi2Cls?: string;
+  sub?: string;
 }) {
   return (
     <div className="summary-card">
       <div className="card-label">{label}</div>
       <div className={`card-value${cls ? " " + cls : ""}`}>{value}</div>
       {usd && <div className="usd">≈ {usd}</div>}
-      {roi && <div className={`roi-pill${roiCls ? " " + roiCls : ""}`}>ROI {roi}</div>}
+      {(roi || roi2) && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {roi && <div className={`roi-pill${roiCls ? " " + roiCls : ""}`}>ROI {roi}</div>}
+          {roi2 && <div className={`roi-pill${roi2Cls ? " " + roi2Cls : ""}`}>{roi2Label || "ROI"} {roi2}</div>}
+        </div>
+      )}
       {sub && <div className="card-sub">{sub}</div>}
     </div>
   );
@@ -99,16 +106,28 @@ export default function Ringkasan({ s, c }: Props) {
         <SCard label="Total Revenue (Jual Semua)" value={fmtIdr(c.totalSell)} cls="amber" usd={fmtUsd(c.totalSell, fx)}
                sub={`${s.units} unit × ${fmtIdr(c.sellPU)} (sebelum komisi)`} />
         <SCard label="Gross Profit (Jual)" value={fmtIdr(grossProfit)} cls={grossProfit >= 0 ? "green" : "red"}
-               usd={fmtUsd(grossProfit, fx)} roi={pct(grossROI)} roiCls={grossROI >= 0 ? "green" : "red"}
+               usd={fmtUsd(grossProfit, fx)}
+               roi={pct(grossROI)} roiCls={grossROI >= 0 ? "green" : "red"}
+               roi2={pct(c.year0Capital > 0 ? (grossProfit / c.year0Capital) * 100 : 0)}
+               roi2Label="ROC Modal Y0"
+               roi2Cls={grossProfit >= 0 ? "amber" : "red"}
                sub="Revenue − Investasi (sebelum komisi)" />
         <SCard label="Net Profit (Jual)" value={fmtIdr(c.profit)} cls={c.profit >= 0 ? "green" : "red"}
-               usd={fmtUsd(c.profit, fx)} roi={pct(c.profitROI)} roiCls={c.profitROI >= 0 ? "green" : "red"}
+               usd={fmtUsd(c.profit, fx)}
+               roi={pct(c.profitROI)} roiCls={c.profitROI >= 0 ? "green" : "red"}
+               roi2={pct(c.year0Capital > 0 ? (c.profit / c.year0Capital) * 100 : 0)}
+               roi2Label="ROC Modal Y0"
+               roi2Cls={c.profit >= 0 ? "amber" : "red"}
                sub={`Revenue ${fmtIdr(c.totalSell)} − Komisi ${fmtIdr(c.sellComm)} − Investasi ${fmtIdr(c.total)}`} />
         <SCard label="Sewa Neto / Tahun" value={fmtIdr(c.rental)} cls="blue" usd={fmtUsd(c.rental, fx)}
                roi={pct(c.yield_)} roiCls="blue"
                sub={`${occ}% occ. · yield tahunan`} />
         <SCard label={`Hold ${c.N}yr → Jual`} value={fmtIdr(c.holdNet)} cls={c.holdNet >= 0 ? "green" : "red"}
-               usd={fmtUsd(c.holdNet, fx)} roi={pct(c.holdROI)} roiCls={c.holdROI >= 0 ? "green" : "red"}
+               usd={fmtUsd(c.holdNet, fx)}
+               roi={pct(c.holdROI)} roiCls={c.holdROI >= 0 ? "green" : "red"}
+               roi2={pct(c.year0Capital > 0 ? (c.holdNet / c.year0Capital) * 100 : 0)}
+               roi2Label="ROC Modal Y0"
+               roi2Cls={c.holdNet >= 0 ? "amber" : "red"}
                sub={`${c.N} thn sewa + jual semua di Thn ${c.N + 1}`} />
       </div>
 
