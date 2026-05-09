@@ -1,217 +1,259 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import type { SessionData } from "@/lib/types";
-import { defaultSession } from "@/lib/calc";
+import { defaultSession, fmtIdr, fmtUsd, calc } from "@/lib/calc";
 
 interface InputPanelProps {
   data: SessionData;
   onChange: (data: SessionData) => void;
-  onFxRefresh: () => void;
-  fxLoading: boolean;
 }
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text2)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        {label}
-      </label>
-      {children}
-      {hint && <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 2 }}>{hint}</div>}
-    </div>
-  );
-}
+export default function InputPanel({ data, onChange }: InputPanelProps) {
+  const rangeRef = useRef<HTMLInputElement>(null);
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, color: "var(--primary)", textTransform: "uppercase",
-        letterSpacing: "0.08em", marginBottom: 10, paddingBottom: 6,
-        borderBottom: "1px solid var(--border)",
-      }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
-export default function InputPanel({ data, onChange, onFxRefresh, fxLoading }: InputPanelProps) {
   const set = useCallback(<K extends keyof SessionData>(key: K, val: SessionData[K]) => {
     onChange({ ...data, [key]: val });
   }, [data, onChange]);
 
-  const num = (val: string) => parseFloat(val) || 0;
+  const num = (val: string) => parseFloat(val.replace(/\D/g, "")) || 0;
+  const fmtInput = (n: number) => n ? new Intl.NumberFormat("id-ID").format(n) : "";
+
+  const c = calc(data);
+
+  // Update range track fill
+  useEffect(() => {
+    if (rangeRef.current) {
+      const pct = ((data.margin - 5) / (150 - 5)) * 100;
+      rangeRef.current.style.setProperty("--pct", `${pct}%`);
+    }
+  }, [data.margin]);
 
   return (
-    <div style={{
-      width: 270,
-      minWidth: 270,
-      background: "var(--surface)",
-      borderRight: "1px solid var(--border)",
-      height: "100%",
-      overflowY: "auto",
-      padding: "16px 14px",
-    }}>
-      {/* FX Rate */}
-      <div style={{ marginBottom: 16, background: "var(--primary-light)", borderRadius: 10, padding: "10px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Kurs USD/IDR
-          </span>
-          <button
-            onClick={onFxRefresh}
-            disabled={fxLoading}
-            style={{
-              background: "var(--primary)", color: "#fff", border: "none",
-              borderRadius: 6, padding: "3px 8px", fontSize: 10, fontWeight: 600,
-              cursor: "pointer", opacity: fxLoading ? 0.6 : 1,
-            }}
-          >{fxLoading ? "↻" : "↻ Refresh"}</button>
-        </div>
-        <input
-          type="number"
-          value={data.fxRate}
-          onChange={e => set("fxRate", num(e.target.value))}
-          style={{ fontWeight: 700 }}
-        />
-      </div>
+    <div className="panel-left">
 
-      <Section title="Tanah & Leasehold">
-        <Field label="Luas Tanah (m²)">
-          <input type="number" value={data.land} onChange={e => set("land", num(e.target.value))} />
-        </Field>
-        <Field label="Harga Leasehold / m² / tahun (Rp)">
-          <input type="number" value={data.pricePerSqm} onChange={e => set("pricePerSqm", num(e.target.value))} />
-        </Field>
-        <Field label="Durasi Leasehold (tahun)">
-          <input type="number" value={data.years} onChange={e => set("years", num(e.target.value))} min={1} max={99} />
-        </Field>
-        <Field label="Pembayaran Leasehold">
+      {/* Tanah & Leasehold */}
+      <div className="form-section">
+        <div className="section-title">Tanah &amp; Leasehold</div>
+        <div className="field-row">
+          <div className="field">
+            <label>Luas Tanah (m²)</label>
+            <input type="number" value={data.land || ""} onChange={e => set("land", parseFloat(e.target.value) || 0)} min={0} />
+          </div>
+          <div className="field">
+            <label>Durasi Lease (tahun)</label>
+            <input type="number" value={data.years || ""} onChange={e => set("years", parseFloat(e.target.value) || 0)} min={1} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Harga Leasehold / m² / tahun</label>
+          <input
+            type="text"
+            value={fmtInput(data.pricePerSqm)}
+            onChange={e => set("pricePerSqm", num(e.target.value))}
+          />
+        </div>
+        <div className="field">
+          <label>Total Biaya Leasehold (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.leasehold)}</div>
+          <div className="field-auto-sub">{data.land}m² × Rp{fmtInput(data.pricePerSqm)}/m²/thn × {data.years} tahun ≈ {fmtUsd(c.leasehold, data.fxRate)}</div>
+        </div>
+        <div className="field">
+          <label>Skema Pembayaran Lease</label>
           <select value={data.terms} onChange={e => set("terms", e.target.value as SessionData["terms"])}>
-            <option value="upfront">Upfront (Lunas)</option>
-            <option value="installment">Installment (Cicilan)</option>
+            <option value="upfront">Upfront — lunas hari ke-1</option>
+            <option value="installment">Cicilan — DP + angsuran tahunan</option>
           </select>
-        </Field>
+        </div>
         {data.terms === "installment" && (
           <>
-            <Field label="DP (%)" hint="% dari total harga leasehold">
-              <input type="number" value={data.dp} onChange={e => set("dp", num(e.target.value))} min={0} max={100} />
-            </Field>
-            <Field label="Tenor (tahun)">
-              <input type="number" value={data.tenor} onChange={e => set("tenor", num(e.target.value))} min={1} max={30} />
-            </Field>
+            <div className="field-row">
+              <div className="field">
+                <label>DP (%)</label>
+                <input type="number" value={data.dp || ""} onChange={e => set("dp", parseFloat(e.target.value) || 0)} min={0} max={100} />
+              </div>
+              <div className="field">
+                <label>Tenor (tahun)</label>
+                <input type="number" value={data.tenor || ""} onChange={e => set("tenor", parseFloat(e.target.value) || 0)} min={1} />
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label>Jumlah DP</label>
+                <div className="field-auto num">{fmtIdr(c.dpAmt)}</div>
+              </div>
+              <div className="field">
+                <label>Cicilan / Tahun</label>
+                <div className="field-auto num">{fmtIdr(c.installAmt)}</div>
+              </div>
+            </div>
           </>
         )}
-      </Section>
+      </div>
 
-      <Section title="Bangunan & Unit">
-        <Field label="Jumlah Unit">
-          <input type="number" value={data.units} onChange={e => set("units", num(e.target.value))} min={1} />
-        </Field>
-        <Field label="Ukuran Unit (m²)">
-          <input type="number" value={data.usize} onChange={e => set("usize", num(e.target.value))} />
-        </Field>
-        <Field label="Biaya Bangun / Unit (Rp)">
-          <input type="number" value={data.buildPerUnit} onChange={e => set("buildPerUnit", num(e.target.value))} />
-        </Field>
-        <Field label="Konstruksi">
-          <select value={data.sellMode} onChange={e => set("sellMode", e.target.value as SessionData["sellMode"])}>
-            <option value="upfront">Semua dibangun dulu</option>
-            <option value="presale">Presale (bangun per unit terjual)</option>
-          </select>
-        </Field>
-        {data.sellMode === "presale" && (
-          <Field label="Unit Sold / Tahun" hint="Rata-rata unit terjual per tahun">
-            <input type="number" value={data.upy} onChange={e => set("upy", num(e.target.value))} min={1} />
-          </Field>
-        )}
-      </Section>
-
-      <Section title="Biaya Lain">
-        <Field label="Misc / Legal / Notaris (Rp)">
-          <input type="number" value={data.misc} onChange={e => set("misc", num(e.target.value))} />
-        </Field>
-        <Field label="Agent Fee Beli (Rp)" hint="Komisi agen saat membeli tanah">
-          <input type="number" value={data.agentBuy} onChange={e => set("agentBuy", num(e.target.value))} />
-        </Field>
-        <Field label="FF&E / Furnishing (Rp)" hint="Furnitur & perlengkapan">
-          <input type="number" value={data.ffe} onChange={e => set("ffe", num(e.target.value))} />
-        </Field>
-        <Field label="Opex Tahunan (% investasi)" hint="Operasional, maintenance, pajak">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="range" min={0} max={20} step={0.5} value={data.opex} onChange={e => set("opex", num(e.target.value))} />
-            <span style={{ width: 38, textAlign: "right", fontWeight: 700, color: "var(--primary)", fontSize: 13 }}>{data.opex}%</span>
+      {/* Bangunan & Biaya */}
+      <div className="form-section">
+        <div className="section-title">Bangunan &amp; Biaya</div>
+        <div className="field-row">
+          <div className="field">
+            <label>Jumlah Unit</label>
+            <input type="number" value={data.units || ""} onChange={e => set("units", parseFloat(e.target.value) || 0)} min={1} />
           </div>
-        </Field>
-      </Section>
-
-      <Section title="Strategi Jual">
-        <Field label="Target Margin (%)">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="range" min={0} max={100} step={1} value={data.margin} onChange={e => set("margin", num(e.target.value))} />
-            <span style={{ width: 38, textAlign: "right", fontWeight: 700, color: "var(--success)", fontSize: 13 }}>{data.margin}%</span>
+          <div className="field">
+            <label>Ukuran Unit (m²)</label>
+            <input type="number" value={data.usize || ""} onChange={e => set("usize", parseFloat(e.target.value) || 0)} />
           </div>
-        </Field>
-        <Field label="Agent Fee Jual (%)">
-          <input type="number" value={data.agentSell} onChange={e => set("agentSell", num(e.target.value))} min={0} max={20} step={0.5} />
-        </Field>
-      </Section>
+        </div>
+        <div className="field">
+          <label>Biaya Bangun / Unit</label>
+          <input type="text" value={fmtInput(data.buildPerUnit)} onChange={e => set("buildPerUnit", num(e.target.value))} />
+        </div>
+        <div className="field">
+          <label>Total Biaya Bangun (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.build)}</div>
+          <div className="field-auto-sub">{data.units} unit × {fmtIdr(data.buildPerUnit)} ≈ {fmtUsd(c.build, data.fxRate)}</div>
+        </div>
+        <div className="field">
+          <label>Biaya Misc (legal, notaris, perizinan, dll.)</label>
+          <input type="text" value={fmtInput(data.misc)} onChange={e => set("misc", num(e.target.value))} />
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <label>Komisi Agen Beli</label>
+            <input type="text" value={fmtInput(data.agentBuy)} onChange={e => set("agentBuy", num(e.target.value))} />
+          </div>
+          <div className="field">
+            <label>FF&amp;E / Furnitur</label>
+            <input type="text" value={fmtInput(data.ffe)} onChange={e => set("ffe", num(e.target.value))} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Opex Tahunan (% dari total investasi)</label>
+          <input type="number" value={data.opex} onChange={e => set("opex", parseFloat(e.target.value) || 0)} min={0} max={50} step={0.5} />
+        </div>
+        <div className="field">
+          <label>Total Biaya / Unit (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.costPU)}</div>
+          <div className="field-auto-sub">Leasehold/unit + bangun + extras ≈ {fmtUsd(c.costPU, data.fxRate)}</div>
+        </div>
+      </div>
 
-      <Section title="Strategi Sewa">
-        <Field label="Model Sewa">
+      {/* Target Margin */}
+      <div className="margin-block">
+        <div className="section-title">Target Margin</div>
+        <div className="margin-header">
+          <div className="margin-label">Profit Margin</div>
+          <div className="margin-val">{data.margin}%</div>
+        </div>
+        <input
+          ref={rangeRef}
+          type="range"
+          min={5}
+          max={150}
+          step={1}
+          value={data.margin}
+          onChange={e => set("margin", parseFloat(e.target.value))}
+        />
+        <div className="field">
+          <label>Komisi Agen Jual (% dari harga jual)</label>
+          <input type="number" value={data.agentSell} onChange={e => set("agentSell", parseFloat(e.target.value) || 0)} min={0} max={20} step={0.5} />
+        </div>
+        <div className="sell-result">
+          <div className="sr-label">Harga Jual / Unit (Rekomendasi)</div>
+          <div className="sr-value num">{fmtIdr(c.sellPU)}</div>
+          <div className="sr-sub">≈ {fmtUsd(c.sellPU, data.fxRate)} · HPP {fmtIdr(c.costPU)} + {data.margin}% margin</div>
+        </div>
+      </div>
+
+      {/* Pendapatan Sewa */}
+      <div className="form-section">
+        <div className="section-title">Pendapatan Sewa</div>
+        <div className="field">
+          <label>Model Rental</label>
           <select value={data.rmodel} onChange={e => set("rmodel", e.target.value as SessionData["rmodel"])}>
-            <option value="nightly">Nightly / Harian</option>
-            <option value="monthly">Monthly / Bulanan</option>
+            <option value="nightly">Per Malam — short-term / Airbnb / villa</option>
+            <option value="monthly">Per Bulan — long-term / kost</option>
           </select>
-        </Field>
+        </div>
         {data.rmodel === "nightly" ? (
-          <>
-            <Field label="Rate / Malam (Rp)">
-              <input type="number" value={data.nrate} onChange={e => set("nrate", num(e.target.value))} />
-            </Field>
-            <Field label="Occupancy (%)">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="range" min={0} max={100} step={1} value={data.nocc} onChange={e => set("nocc", num(e.target.value))} />
-                <span style={{ width: 38, textAlign: "right", fontWeight: 700, color: "var(--blue)", fontSize: 13 }}>{data.nocc}%</span>
-              </div>
-            </Field>
-          </>
+          <div className="field-row">
+            <div className="field">
+              <label>Rate / Malam</label>
+              <input type="text" value={fmtInput(data.nrate)} onChange={e => set("nrate", num(e.target.value))} />
+            </div>
+            <div className="field">
+              <label>Occupancy (%)</label>
+              <input type="number" value={data.nocc} onChange={e => set("nocc", parseFloat(e.target.value) || 0)} min={0} max={100} />
+            </div>
+          </div>
         ) : (
-          <>
-            <Field label="Rate / Bulan (Rp)">
-              <input type="number" value={data.mrate} onChange={e => set("mrate", num(e.target.value))} />
-            </Field>
-            <Field label="Occupancy (%)">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="range" min={0} max={100} step={1} value={data.mocc} onChange={e => set("mocc", num(e.target.value))} />
-                <span style={{ width: 38, textAlign: "right", fontWeight: 700, color: "var(--blue)", fontSize: 13 }}>{data.mocc}%</span>
-              </div>
-            </Field>
-          </>
+          <div className="field-row">
+            <div className="field">
+              <label>Rate / Bulan</label>
+              <input type="text" value={fmtInput(data.mrate)} onChange={e => set("mrate", num(e.target.value))} />
+            </div>
+            <div className="field">
+              <label>Occupancy (%)</label>
+              <input type="number" value={data.mocc} onChange={e => set("mocc", parseFloat(e.target.value) || 0)} min={0} max={100} />
+            </div>
+          </div>
         )}
-        <Field label="Property Management Fee (%)">
-          <input type="number" value={data.pmgmt} onChange={e => set("pmgmt", num(e.target.value))} min={0} max={50} step={0.5} />
-        </Field>
-      </Section>
+        <div className="field">
+          <label>Property Management Fee (% dari sewa)</label>
+          <input type="number" value={data.pmgmt} onChange={e => set("pmgmt", parseFloat(e.target.value) || 0)} min={0} max={50} step={0.5} />
+        </div>
+        <div className="field">
+          <label>Pendapatan Sewa Bruto / Tahun (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.rentalGross)}</div>
+          <div className="field-auto-sub">≈ {fmtUsd(c.rentalGross, data.fxRate)}</div>
+        </div>
+        <div className="field">
+          <label>Pendapatan Sewa Neto / Tahun (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.netRental)}</div>
+          <div className="field-auto-sub">Setelah PM {data.pmgmt}% + opex ≈ {fmtUsd(c.netRental, data.fxRate)}</div>
+        </div>
+        <div className="field">
+          <label>Total Sewa Sepanjang Lease (auto)</label>
+          <div className="field-auto num">{fmtIdr(c.netRental * data.years)}</div>
+          <div className="field-auto-sub">{data.years} tahun × {fmtIdr(c.netRental)}/tahun ≈ {fmtUsd(c.netRental * data.years, data.fxRate)}</div>
+        </div>
+      </div>
 
-      <Section title="Hold & Jual">
-        <Field label="Hold Selama (tahun)" hint="Sewa N tahun lalu jual semua unit">
-          <input type="number" value={data.holdYears} onChange={e => set("holdYears", num(e.target.value))} min={1} max={30} />
-        </Field>
-      </Section>
+      {/* Hold & Jual */}
+      <div className="form-section">
+        <div className="section-title">Hold &amp; Jual</div>
+        <div className="field">
+          <label>Konstruksi</label>
+          <select value={data.sellMode} onChange={e => set("sellMode", e.target.value as SessionData["sellMode"])}>
+            <option value="upfront">Bangun Semua di Tahun 0</option>
+            <option value="presale">Show Unit + Presale (build per sale)</option>
+          </select>
+        </div>
+        {data.sellMode === "presale" && (
+          <div className="field">
+            <label>Unit Terjual / Tahun</label>
+            <input type="number" value={data.upy} onChange={e => set("upy", parseFloat(e.target.value) || 1)} min={1} />
+          </div>
+        )}
+        <div className="field">
+          <label>Hold selama N tahun lalu jual semua</label>
+          <input type="number" value={data.holdYears} onChange={e => set("holdYears", parseFloat(e.target.value) || 1)} min={1} max={30} />
+        </div>
+      </div>
 
-      {/* Reset button */}
-      <button
-        onClick={() => onChange(defaultSession())}
-        style={{
-          width: "100%", padding: "8px", background: "transparent", border: "1.5px dashed var(--border)",
-          borderRadius: 8, color: "var(--text3)", fontSize: 12, marginTop: 4,
-          transition: "all 0.15s",
-        }}
-        onMouseEnter={e => { (e.target as HTMLButtonElement).style.borderColor = "var(--danger)"; (e.target as HTMLButtonElement).style.color = "var(--danger)"; }}
-        onMouseLeave={e => { (e.target as HTMLButtonElement).style.borderColor = "var(--border)"; (e.target as HTMLButtonElement).style.color = "var(--text3)"; }}
-      >Reset ke Default</button>
+      {/* Reset */}
+      <div className="form-section">
+        <button
+          onClick={() => onChange(defaultSession())}
+          style={{
+            width: "100%", padding: "8px", background: "transparent",
+            border: "1px dashed var(--border)", borderRadius: 8,
+            color: "var(--text-3)", fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+          }}
+          onMouseEnter={e => { (e.target as HTMLButtonElement).style.borderColor = "var(--red)"; (e.target as HTMLButtonElement).style.color = "var(--red)"; }}
+          onMouseLeave={e => { (e.target as HTMLButtonElement).style.borderColor = "var(--border)"; (e.target as HTMLButtonElement).style.color = "var(--text-3)"; }}
+        >Reset ke Default</button>
+      </div>
     </div>
   );
 }

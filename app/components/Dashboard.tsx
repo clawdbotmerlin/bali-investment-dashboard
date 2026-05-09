@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Script from "next/script";
 import type { Project, SessionData } from "@/lib/types";
 import { defaultSession } from "@/lib/calc";
-import Sidebar from "./Sidebar";
 import InputPanel from "./InputPanel";
 import TabPanel from "./TabPanel";
 
@@ -13,11 +12,12 @@ export default function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
   const [chartReady, setChartReady] = useState(false);
+  const [modal, setModal] = useState<{ mode: "create" | "rename"; value: string } | null>(null);
+  const modalInputRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeProject = projects.find(p => p.id === activeId) ?? null;
 
-  // Load projects on mount
   useEffect(() => {
     fetch("/api/projects")
       .then(r => r.json())
@@ -28,7 +28,13 @@ export default function Dashboard() {
       .catch(console.error);
   }, []);
 
-  // Auto-save active project data with debounce
+  useEffect(() => {
+    if (modal && modalInputRef.current) {
+      modalInputRef.current.focus();
+      modalInputRef.current.select();
+    }
+  }, [modal]);
+
   const saveProject = useCallback((id: string, patch: { name?: string; data?: SessionData }) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -70,12 +76,14 @@ export default function Dashboard() {
     saveProject(id, { name });
   }, [saveProject]);
 
-  const handleDelete = useCallback((id: string) => {
-    fetch(`/api/projects/${id}`, { method: "DELETE" })
+  const handleDelete = useCallback(() => {
+    if (!activeId) return;
+    if (!confirm("Hapus proyek ini?")) return;
+    fetch(`/api/projects/${activeId}`, { method: "DELETE" })
       .then(() => {
         setProjects(prev => {
-          const next = prev.filter(p => p.id !== id);
-          if (activeId === id) setActiveId(next.length > 0 ? next[0].id : null);
+          const next = prev.filter(p => p.id !== activeId);
+          setActiveId(next.length > 0 ? next[0].id : null);
           return next;
         });
       })
@@ -89,71 +97,135 @@ export default function Dashboard() {
       const r = await fetch("https://open.er-api.com/v6/latest/USD", { cache: "no-store" });
       const d = await r.json();
       if (d?.rates?.IDR) {
-        const fxRate = Math.round(d.rates.IDR);
-        handleDataChange({ ...activeProject.data, fxRate });
+        handleDataChange({ ...activeProject.data, fxRate: Math.round(d.rates.IDR) });
       }
     } catch {
-      alert("Gagal fetch kurs. Cek koneksi internet.");
+      alert("Gagal fetch kurs. Cek koneksi.");
     } finally {
       setFxLoading(false);
     }
   }, [activeProject, fxLoading, handleDataChange]);
 
+  function openCreate() {
+    setModal({ mode: "create", value: "" });
+  }
+
+  function openRename() {
+    if (!activeProject) return;
+    setModal({ mode: "rename", value: activeProject.name });
+  }
+
+  function confirmModal() {
+    if (!modal) return;
+    const name = modal.value.trim() || "Proyek Baru";
+    if (modal.mode === "create") {
+      handleCreate(name);
+    } else if (activeId) {
+      handleRename(activeId, name);
+    }
+    setModal(null);
+  }
+
   return (
     <>
       <Script
-        src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"
+        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
         strategy="afterInteractive"
         onLoad={() => setChartReady(true)}
       />
 
-      <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
-        {/* Project sidebar */}
-        <Sidebar
-          projects={projects}
-          activeId={activeId}
-          onSelect={setActiveId}
-          onCreate={handleCreate}
-          onRename={handleRename}
-          onDelete={handleDelete}
-        />
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+        {/* Header */}
+        <div className="header">
+          <div className="logo display">Bali <span>Investment</span></div>
 
+          {/* FX Badge */}
+          <div className="fx-badge" title="Klik ↻ untuk refresh kurs live">
+            <span className="fx-prefix">$1 =</span>
+            <span style={{ color: "var(--text-3)", fontSize: 11 }}>Rp</span>
+            <input
+              type="text"
+              className="fx-input"
+              value={activeProject ? new Intl.NumberFormat("id-ID").format(activeProject.data.fxRate) : "16.000"}
+              onChange={e => {
+                if (!activeProject) return;
+                const val = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0;
+                handleDataChange({ ...activeProject.data, fxRate: val });
+              }}
+            />
+            <button
+              className={`fx-refresh${fxLoading ? " spin" : ""}`}
+              onClick={handleFxRefresh}
+              title="Refresh kurs"
+            >↻</button>
+          </div>
+
+          {/* Session pills */}
+          <div className="sessions">
+            {projects.map(p => (
+              <button
+                key={p.id}
+                className={`pill ${p.id === activeId ? "active" : "inactive"}`}
+                onClick={() => p.id === activeId ? openRename() : setActiveId(p.id)}
+                title={p.id === activeId ? "Klik untuk rename" : p.name}
+              >
+                {p.name}
+                {p.id === activeId && <span style={{ fontSize: 10, opacity: 0.7 }}>✏</span>}
+              </button>
+            ))}
+          </div>
+
+          <button className="pill new-pill" onClick={openCreate}>+ Proyek Baru</button>
+          {activeId && (
+            <button className="btn-danger" onClick={handleDelete}>Hapus</button>
+          )}
+        </div>
+
+        {/* Main */}
         {activeProject ? (
-          <>
-            {/* Input panel */}
+          <div className="main">
             <InputPanel
               data={activeProject.data}
               onChange={handleDataChange}
-              onFxRefresh={handleFxRefresh}
-              fxLoading={fxLoading}
             />
-
-            {/* Main tab panel */}
             {chartReady ? (
               <TabPanel activeProject={activeProject} allProjects={projects} />
             ) : (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text3)", fontSize: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)", fontSize: 14 }}>
                 Memuat grafik...
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text3)" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-3)" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🏡</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)", marginBottom: 8 }}>Belum ada proyek</div>
-            <div style={{ fontSize: 13, marginBottom: 24 }}>Klik + di sidebar untuk membuat proyek pertama</div>
-            <button
-              onClick={() => handleCreate("Proyek Pertama")}
-              style={{
-                background: "var(--primary)", color: "#fff", border: "none",
-                borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer",
-              }}
-            >
-              + Buat Proyek Baru
-            </button>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-2)", marginBottom: 8 }}>Belum ada proyek</div>
+            <div style={{ fontSize: 13, marginBottom: 24 }}>Klik &quot;+ Proyek Baru&quot; di header untuk memulai</div>
+            <button className="btn-confirm" onClick={openCreate}>+ Proyek Baru</button>
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {modal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="modal-box">
+            <h3>{modal.mode === "create" ? "Nama Proyek Baru" : "Rename Proyek"}</h3>
+            <input
+              ref={modalInputRef}
+              type="text"
+              placeholder="Canggu Villa A"
+              value={modal.value}
+              onChange={e => setModal(m => m ? { ...m, value: e.target.value } : m)}
+              onKeyDown={e => { if (e.key === "Enter") confirmModal(); if (e.key === "Escape") setModal(null); }}
+            />
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setModal(null)}>Batal</button>
+              <button className="btn-confirm" onClick={confirmModal}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
