@@ -11,6 +11,7 @@ export function defaultSession(): SessionData {
     pmgmt: 15,
     upy: 2, holdYears: 1,
     sellMode: "upfront", fxRate: 16000,
+    mapUrl: "",
   };
 }
 

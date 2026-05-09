@@ -31,6 +31,37 @@ export default function InputPanel({ data, onChange }: InputPanelProps) {
 
   return (
     <div className="panel-left">
+      {/* Lokasi */}
+      <div className="form-section">
+        <div className="section-title">Lokasi</div>
+        <div className="field">
+          <label>Google Maps URL</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              type="text"
+              placeholder="https://maps.google.com/..."
+              value={data.mapUrl || ""}
+              onChange={e => set("mapUrl", e.target.value)}
+              style={{ flex: 1 }}
+            />
+            {data.mapUrl && (
+              <a
+                href={data.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buka di Google Maps"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  padding: "0 12px", background: "var(--primary)", color: "#fff",
+                  borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none",
+                  flexShrink: 0,
+                }}
+              >📍 Buka</a>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Tanah & Leasehold */}
       <div className="form-section">
         <div className="section-title">Tanah &amp; Leasehold</div>

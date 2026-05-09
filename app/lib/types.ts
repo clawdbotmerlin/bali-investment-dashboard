@@ -24,6 +24,7 @@ export interface SessionData {
   holdYears: number;
   sellMode: "upfront" | "presale";
   fxRate: number;
+  mapUrl?: string;
 }
 
 export interface Project {
