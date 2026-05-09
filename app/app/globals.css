@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface2: #f0f1f6;
+  --border: #e2e4ed;
+  --text: #1a1d2e;
+  --text2: #5a5f7a;
+  --text3: #9499b2;
+  --primary: #4f46e5;
+  --primary-light: #eef2ff;
+  --success: #059669;
+  --success-light: #ecfdf5;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --blue: #2563eb;
+  --blue-light: #eff6ff;
+  --font-sans: var(--font-inter), var(--font-jakarta), system-ui, sans-serif;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Form elements */
+input[type="number"], input[type="text"], select {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.15s;
+  outline: none;
+}
+input[type="number"]:focus, input[type="text"]:focus, select:focus {
+  border-color: var(--primary);
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+/* Buttons */
+button { font-family: inherit; cursor: pointer; }
+
+/* Utility classes */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.pill-green { background: var(--success-light); color: var(--success); }
+.pill-amber { background: var(--warning-light); color: var(--warning); }
+.pill-red   { background: var(--danger-light);  color: var(--danger); }
+.pill-blue  { background: var(--blue-light);    color: var(--blue); }
+.pill-indigo { background: var(--primary-light); color: var(--primary); }
+
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger  { color: var(--danger); }
+.text-blue    { color: var(--blue); }
+.text-primary { color: var(--primary); }
+.text-2       { color: var(--text2); }
+.text-3       { color: var(--text3); }
