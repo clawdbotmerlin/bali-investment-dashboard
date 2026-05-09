@@ -44,6 +44,19 @@ export function calc(s: SessionData): CalcResult {
   const N = s.holdYears || 1;
   const holdNet = N * netRental + netSell - total;
   const holdROI = total > 0 ? (holdNet / total) * 100 : 0;
+
+  // Year-0 capital + best-case Year-1 ROC (sell all units in year 1)
+  const presale = s.sellMode === "presale";
+  const year0Capital = presale
+    ? (s.terms === "installment" ? dpAmt : leasehold) + s.buildPerUnit + upfrontExtras
+    : (s.terms === "installment" ? dpAmt + s.units * s.buildPerUnit + upfrontExtras : total);
+  const sellNetPU = sellPU * (1 - (s.agentSell || 0) / 100);
+  const year1Revenue = s.units * sellNetPU;
+  const year1BuildCost = presale ? Math.max(0, s.units - 1) * s.buildPerUnit : 0;
+  const year1Installment = s.terms === "installment" && s.tenor >= 1 ? annualI : 0;
+  const year1BestNet = year1Revenue - year1BuildCost - year1Installment;
+  const year1BestROC = year0Capital > 0 ? (year1BestNet / year0Capital) * 100 : 0;
+
   return {
     leasehold, build, upfrontExtras, total,
     landPU, extrasPU,
@@ -52,6 +65,7 @@ export function calc(s: SessionData): CalcResult {
     profit, profitROI,
     opex, rentalGross, pmgmtFee, rental, netRental, yield_,
     N, holdNet, holdROI,
+    year0Capital, year1BestNet, year1BestROC,
   };
 }
 

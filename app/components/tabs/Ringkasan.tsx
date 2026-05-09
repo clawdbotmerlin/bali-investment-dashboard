@@ -88,6 +88,13 @@ export default function Ringkasan({ s, c }: Props) {
       <div className="summary-grid">
         <SCard label="Total Investasi" value={fmtIdr(c.total)} cls="green" usd={fmtUsd(c.total, fx)}
                sub={`Leasehold ${lp}% · Bangun ${bp}% · Extras ${ep}%`} />
+        <SCard label="Modal Tahun 0 (cash needed)" value={fmtIdr(c.year0Capital)} cls="purple" usd={fmtUsd(c.year0Capital, fx)}
+               sub={s.sellMode === "presale"
+                 ? `${s.terms === "installment" ? "DP lease" : "Lease lunas"} + 1 show unit + extras (${((c.year0Capital / c.total) * 100).toFixed(0)}% dari total)`
+                 : `Bangun semua ${s.units} unit upfront${s.terms === "installment" ? " + DP lease" : ""}`} />
+        <SCard label="Best-case ROC (jual habis di Thn 1)" value={pct(c.year1BestROC)}
+               cls={c.year1BestROC >= 0 ? "green" : "red"}
+               sub={`Net Thn 1: ${fmtIdr(c.year1BestNet)} ÷ Modal Thn 0: ${fmtIdr(c.year0Capital)}`} />
         <SCard label="Biaya / Unit" value={fmtIdr(c.costPU)} cls="purple" usd={fmtUsd(c.costPU, fx)}
                sub={`${s.units} unit total`} />
         <SCard label="Harga Jual / Unit" value={fmtIdr(c.sellPU)} cls="amber" usd={fmtUsd(c.sellPU, fx)}

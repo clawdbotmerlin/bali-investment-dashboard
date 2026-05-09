@@ -60,4 +60,7 @@ export interface CalcResult {
   N: number;
   holdNet: number;
   holdROI: number;
+  year0Capital: number;
+  year1BestNet: number;
+  year1BestROC: number;
 }
