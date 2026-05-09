@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [fxLoading, setFxLoading] = useState(false);
   const [chartReady, setChartReady] = useState(false);
   const [modal, setModal] = useState<{ mode: "create" | "rename"; value: string } | null>(null);
+  const [modalKey, setModalKey] = useState(0);
   const modalInputRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -33,7 +34,8 @@ export default function Dashboard() {
       modalInputRef.current.focus();
       modalInputRef.current.select();
     }
-  }, [modal]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalKey]);
 
   const saveProject = useCallback((id: string, patch: { name?: string; data?: SessionData }) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -108,11 +110,13 @@ export default function Dashboard() {
 
   function openCreate() {
     setModal({ mode: "create", value: "" });
+    setModalKey(k => k + 1);
   }
 
   function openRename() {
     if (!activeProject) return;
     setModal({ mode: "rename", value: activeProject.name });
+    setModalKey(k => k + 1);
   }
 
   function confirmModal() {
