@@ -193,7 +193,7 @@ export default function Dashboard() {
               onChange={handleDataChange}
             />
             {chartReady ? (
-              <TabPanel activeProject={activeProject} allProjects={projects} />
+              <TabPanel activeProject={activeProject} allProjects={projects} onChange={handleDataChange} />
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)", fontSize: 14 }}>
                 Memuat grafik...

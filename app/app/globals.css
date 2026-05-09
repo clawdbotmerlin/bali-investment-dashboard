@@ -117,6 +117,8 @@ body{
   border-radius:8px;padding:8px 12px;
   font-variant-numeric:tabular-nums;letter-spacing:-.01em;
 }
+.field-auto .amt{color:var(--success)}
+.field-auto .usd{color:var(--success);opacity:.7;font-weight:600;font-size:12px}
 .field-auto-sub{font-size:10px;color:var(--success);opacity:.8;margin-top:4px;font-weight:500}
 
 /* ── Margin Slider ── */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Project, CalcResult } from "@/lib/types";
+import type { Project, CalcResult, SessionData } from "@/lib/types";
 import { calc } from "@/lib/calc";
 import Ringkasan from "./tabs/Ringkasan";
 import SimulasiJual from "./tabs/SimulasiJual";
@@ -22,9 +22,10 @@ type TabId = (typeof TABS)[number]["id"];
 interface TabPanelProps {
   activeProject: Project;
   allProjects: Project[];
+  onChange: (data: SessionData) => void;
 }
 
-export default function TabPanel({ activeProject, allProjects }: TabPanelProps) {
+export default function TabPanel({ activeProject, allProjects, onChange }: TabPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("ringkasan");
   const c: CalcResult = calc(activeProject.data);
 
@@ -44,9 +45,9 @@ export default function TabPanel({ activeProject, allProjects }: TabPanelProps) 
 
       <div className="right-content" style={{ flex: 1 }}>
         {activeTab === "ringkasan" && <Ringkasan s={activeProject.data} c={c} />}
-        {activeTab === "jual" && <SimulasiJual s={activeProject.data} c={c} />}
+        {activeTab === "jual" && <SimulasiJual s={activeProject.data} c={c} onChange={onChange} />}
         {activeTab === "sewa" && <SimulasiSewa s={activeProject.data} c={c} />}
-        {activeTab === "hold" && <HoldJual s={activeProject.data} c={c} />}
+        {activeTab === "hold" && <HoldJual s={activeProject.data} c={c} onChange={onChange} />}
         {activeTab === "bandingkan" && <Bandingkan projects={allProjects} activeId={activeProject.id} />}
       </div>
     </div>

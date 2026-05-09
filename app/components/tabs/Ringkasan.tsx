@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { SessionData, CalcResult } from "@/lib/types";
-import { fmtIdr, fmtUsd, pct } from "@/lib/calc";
+import { fmtIdr, fmtUsd, pct, cfSell, cfRent } from "@/lib/calc";
 
 interface Props { s: SessionData; c: CalcResult; }
 
@@ -14,8 +14,8 @@ function SCard({ label, value, cls, usd, roi, roiCls, sub }: {
     <div className="summary-card">
       <div className="card-label">{label}</div>
       <div className={`card-value${cls ? " " + cls : ""}`}>{value}</div>
-      {usd && <div className="usd">{usd}</div>}
-      {roi && <div className={`roi-pill${roiCls ? " " + roiCls : ""}`}>{roi}</div>}
+      {usd && <div className="usd">≈ {usd}</div>}
+      {roi && <div className={`roi-pill${roiCls ? " " + roiCls : ""}`}>ROI {roi}</div>}
       {sub && <div className="card-sub">{sub}</div>}
     </div>
   );
@@ -24,95 +24,95 @@ function SCard({ label, value, cls, usd, roi, roiCls, sub }: {
 export default function Ringkasan({ s, c }: Props) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<{ destroy(): void } | null>(null);
+  const fx = s.fxRate;
+
+  const lp = c.total > 0 ? ((c.leasehold / c.total) * 100).toFixed(0) : "0";
+  const bp = c.total > 0 ? ((c.build / c.total) * 100).toFixed(0) : "0";
+  const ep = c.total > 0 ? ((c.upfrontExtras / c.total) * 100).toFixed(0) : "0";
+  const grossProfit = c.totalSell - c.total;
+  const grossROI = c.total > 0 ? (grossProfit / c.total) * 100 : 0;
+  const totalLeaseRental = c.rental * (s.years || 1);
+  const totalLeaseROI = c.total > 0 ? (totalLeaseRental / c.total) * 100 : 0;
 
   useEffect(() => {
     if (!chartRef.current || !window.Chart) return;
-    const sellOnly = c.profit;
-    const rentOnly = c.netRental * s.years - c.total;
-    const hold = c.holdNet;
+    const sellRows = cfSell(s, c);
+    const rentRows = cfRent(s, c);
+    const labels = Array.from({ length: 11 }, (_, i) => `Thn ${i}`);
+
+    const sellLine = sellRows.map(r => r.cumulative);
+    while (sellLine.length < 11) sellLine.push(sellLine[sellLine.length - 1] ?? 0);
+
+    const rentLine: number[] = [-c.total];
+    for (let yr = 1; yr <= 10; yr++) {
+      const row = rentRows.find(r => r.year === yr);
+      const cf = row ? row.cashflow : c.netRental;
+      rentLine.push(rentLine[rentLine.length - 1] + cf);
+    }
+
+    const holdLine: number[] = [-c.total];
+    for (let yr = 1; yr <= 10; yr++) {
+      let v = holdLine[holdLine.length - 1];
+      if (yr <= c.N) v += c.netRental;
+      else if (yr === c.N + 1) v += c.netSell;
+      holdLine.push(v);
+    }
+
     chartInst.current?.destroy();
     chartInst.current = new window.Chart(chartRef.current, {
-      type: "bar",
+      type: "line",
       data: {
-        labels: ["Jual Semua", `Sewa ${s.years}yr`, `Hold ${s.holdYears}yr→Jual`],
-        datasets: [{
-          label: "Net Profit",
-          data: [sellOnly, rentOnly, hold],
-          backgroundColor: [
-            sellOnly >= 0 ? "#059669" : "#dc2626",
-            rentOnly >= 0 ? "#2563eb" : "#dc2626",
-            hold >= 0 ? "#4f46e5" : "#dc2626",
-          ],
-          borderRadius: 6,
-        }],
+        labels,
+        datasets: [
+          { label: "Jual Bertahap", data: sellLine, borderColor: "#dc2626", backgroundColor: "rgba(220,38,38,.08)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+          { label: "Sewa Saja", data: rentLine, borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.08)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+          { label: `Hold ${c.N}yr → Jual`, data: holdLine, borderColor: "#d97706", backgroundColor: "rgba(217,119,6,.08)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+        ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 12 } } },
         scales: {
-          y: { ticks: { callback: (v: unknown) => { const n = Number(v); return Math.abs(n) >= 1e9 ? `${(n/1e9).toFixed(1)}M` : Math.abs(n) >= 1e6 ? `${(n/1e6).toFixed(0)}jt` : n.toString(); }, font: { size: 11 } }, grid: { color: "#e5e7eb" } },
+          y: { ticks: { callback: (v: unknown) => { const n = Number(v); return Math.abs(n) >= 1e9 ? `Rp ${(n/1e9).toFixed(1)}M` : Math.abs(n) >= 1e6 ? `Rp ${(n/1e6).toFixed(0)}jt` : `Rp ${n}`; }, font: { size: 11 } }, grid: { color: "#f1f5f9" } },
           x: { ticks: { font: { size: 11 } }, grid: { display: false } },
         },
       },
-    });
+    } as Record<string, unknown>);
     return () => { chartInst.current?.destroy(); };
-  }, [c, s]);
+  }, [s, c]);
 
-  const fx = s.fxRate;
+  const occ = s.rmodel === "nightly" ? s.nocc : s.mocc;
 
   return (
     <>
       <div className="summary-grid">
-        <SCard label="Total Investasi" value={fmtIdr(c.total)} usd={`≈ ${fmtUsd(c.total, fx)}`} />
-        <SCard label="Biaya / Unit" value={fmtIdr(c.costPU)} cls="indigo" usd={`≈ ${fmtUsd(c.costPU, fx)}`} />
-        <SCard label="Harga Jual / Unit" value={fmtIdr(c.sellPU)} cls="amber" usd={`≈ ${fmtUsd(c.sellPU, fx)}`} sub={`Margin ${s.margin}% dari HPP`} />
-        <SCard label="Total Revenue Jual" value={fmtIdr(c.totalSell)} cls="green" usd={`≈ ${fmtUsd(c.totalSell, fx)}`} sub={`Net setelah komisi: ${fmtIdr(c.netSell)}`} />
-        <SCard
-          label="Net Profit (Jual)" value={fmtIdr(c.profit)}
-          cls={c.profit >= 0 ? "green" : "red"} usd={`≈ ${fmtUsd(c.profit, fx)}`}
-          roi={`ROI ${pct(c.profitROI)}`} roiCls={c.profit >= 0 ? "green" : "red"}
-          sub={`${fmtIdr(c.netSell)} − ${fmtIdr(c.total)}`}
-        />
-        <SCard label="Sewa Bruto / Tahun" value={fmtIdr(c.rentalGross)} cls="blue" usd={`≈ ${fmtUsd(c.rentalGross, fx)}`} sub={`Neto: ${fmtIdr(c.netRental)}`} />
-        <SCard label="Gross Rental Yield" value={`${c.yield_.toFixed(1)}%`} cls={c.yield_ >= 8 ? "green" : c.yield_ >= 5 ? "amber" : "red"} sub="Sewa tahunan / investasi" />
-        <SCard
-          label={`Hold ${s.holdYears}yr → Jual`} value={fmtIdr(c.holdNet)}
-          cls={c.holdNet >= 0 ? "green" : "red"} usd={`≈ ${fmtUsd(c.holdNet, fx)}`}
-          roi={`ROI ${pct(c.holdROI)}`} roiCls={c.holdNet >= 0 ? "green" : "red"}
-          sub={`Sewa ${s.holdYears}yr + jual semua`}
-        />
-        <SCard label="Opex Tahunan" value={fmtIdr(c.opex)} cls="amber" usd={`≈ ${fmtUsd(c.opex, fx)}`} sub={`${s.opex}% dari total investasi`} />
+        <SCard label="Total Investasi" value={fmtIdr(c.total)} cls="green" usd={fmtUsd(c.total, fx)}
+               sub={`Leasehold ${lp}% · Bangun ${bp}% · Extras ${ep}%`} />
+        <SCard label="Biaya / Unit" value={fmtIdr(c.costPU)} cls="purple" usd={fmtUsd(c.costPU, fx)}
+               sub={`${s.units} unit total`} />
+        <SCard label="Harga Jual / Unit" value={fmtIdr(c.sellPU)} cls="amber" usd={fmtUsd(c.sellPU, fx)}
+               sub={`Margin ${s.margin}% · komisi ${s.agentSell || 0}%`} />
+        <SCard label="Total Revenue (Jual Semua)" value={fmtIdr(c.totalSell)} cls="amber" usd={fmtUsd(c.totalSell, fx)}
+               sub={`${s.units} unit × ${fmtIdr(c.sellPU)} (sebelum komisi)`} />
+        <SCard label="Gross Profit (Jual)" value={fmtIdr(grossProfit)} cls={grossProfit >= 0 ? "green" : "red"}
+               usd={fmtUsd(grossProfit, fx)} roi={pct(grossROI)} roiCls={grossROI >= 0 ? "green" : "red"}
+               sub="Revenue − Investasi (sebelum komisi)" />
+        <SCard label="Net Profit (Jual)" value={fmtIdr(c.profit)} cls={c.profit >= 0 ? "green" : "red"}
+               usd={fmtUsd(c.profit, fx)} roi={pct(c.profitROI)} roiCls={c.profitROI >= 0 ? "green" : "red"}
+               sub={`Revenue ${fmtIdr(c.totalSell)} − Komisi ${fmtIdr(c.sellComm)} − Investasi ${fmtIdr(c.total)}`} />
+        <SCard label="Sewa Neto / Tahun" value={fmtIdr(c.rental)} cls="blue" usd={fmtUsd(c.rental, fx)}
+               roi={pct(c.yield_)} roiCls="blue"
+               sub={`${occ}% occ. · yield tahunan`} />
+        <SCard label={`Sewa Total Sepanjang ${s.years} Thn`} value={fmtIdr(totalLeaseRental)} cls="blue"
+               usd={fmtUsd(totalLeaseRental, fx)} roi={pct(totalLeaseROI)} roiCls={totalLeaseROI >= 0 ? "green" : "red"}
+               sub={`${fmtIdr(c.rental)}/thn × ${s.years} thn (asumsi occupancy konstan)`} />
+        <SCard label={`Hold ${c.N}yr → Jual`} value={fmtIdr(c.holdNet)} cls={c.holdNet >= 0 ? "green" : "red"}
+               usd={fmtUsd(c.holdNet, fx)} roi={pct(c.holdROI)} roiCls={c.holdROI >= 0 ? "green" : "red"}
+               sub={`${c.N} thn sewa + jual semua di Thn ${c.N + 1}`} />
       </div>
 
-      {/* Breakdown */}
       <div className="chart-box">
-        <div className="chart-title">Breakdown Biaya</div>
-        <table className="sim-table">
-          <thead><tr><th>Komponen</th><th style={{ textAlign: "right" }}>Jumlah</th><th style={{ textAlign: "right" }}>USD</th><th style={{ textAlign: "right" }}>%</th></tr></thead>
-          <tbody>
-            {[
-              { label: "Leasehold", val: c.leasehold, sub: `${s.land}m² × Rp${(s.pricePerSqm / 1e6).toFixed(2)}jt × ${s.years}yr` },
-              { label: "Bangunan", val: c.build, sub: `${s.units} unit × ${fmtIdr(s.buildPerUnit)}` },
-              { label: "Misc / Legal / Agent / FF&E", val: c.upfrontExtras, sub: "" },
-              { label: "Total", val: c.total, sub: "", bold: true },
-            ].map(row => (
-              <tr key={row.label}>
-                <td style={{ fontWeight: row.bold ? 700 : 400 }}>
-                  {row.label}
-                  {row.sub && <div style={{ fontSize: 11, color: "var(--text-3)" }}>{row.sub}</div>}
-                </td>
-                <td style={{ textAlign: "right", fontWeight: row.bold ? 700 : 600 }} className="num">{fmtIdr(row.val)}</td>
-                <td style={{ textAlign: "right" }} className="num dim">{fmtUsd(row.val, fx)}</td>
-                <td style={{ textAlign: "right" }} className="num dim">{c.total > 0 ? ((row.val / c.total) * 100).toFixed(1) + "%" : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Scenario chart */}
-      <div className="chart-box">
-        <div className="chart-title">Kumulatif Cash Flow — 3 Skenario</div>
+        <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
         <div className="chart-wrap"><canvas ref={chartRef} /></div>
       </div>
     </>

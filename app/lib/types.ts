@@ -39,11 +39,15 @@ export interface CalcResult {
   build: number;
   upfrontExtras: number;
   total: number;
+  landPU: number;
+  extrasPU: number;
   dpAmt: number;
   installAmt: number;
+  annualI: number;
   costPU: number;
   sellPU: number;
   totalSell: number;
+  sellComm: number;
   netSell: number;
   profit: number;
   profitROI: number;
@@ -53,6 +57,7 @@ export interface CalcResult {
   rental: number;
   netRental: number;
   yield_: number;
+  N: number;
   holdNet: number;
   holdROI: number;
 }

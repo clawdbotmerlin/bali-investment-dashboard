@@ -2,21 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import type { SessionData, CalcResult } from "@/lib/types";
-import { cfRent, fmtIdr, pct } from "@/lib/calc";
+import { fmtIdr, fmtUsd, pct, calc } from "@/lib/calc";
 
-interface Props { s: SessionData; c: CalcResult; }
+interface Props { s: SessionData; c: CalcResult; onChange: (s: SessionData) => void; }
 
-export default function HoldJual({ s, c }: Props) {
-  const rentRows = cfRent(s, c);
+export default function HoldJual({ s, c, onChange }: Props) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<{ destroy(): void } | null>(null);
+  const fx = s.fxRate;
 
   const scenarios = Array.from({ length: 10 }, (_, i) => {
     const n = i + 1;
-    const cumRentalNet = rentRows.find(r => r.year === n)?.cumCashflow ?? c.netRental * n;
-    const holdNet = cumRentalNet + c.netSell - c.total;
-    const holdROI = c.total > 0 ? (holdNet / c.total) * 100 : 0;
-    return { n, cumRentalNet, holdNet, holdROI };
+    const sx: SessionData = { ...s, holdYears: n };
+    const cx = calc(sx);
+    return { n, holdNet: cx.holdNet, holdROI: cx.holdROI, cumRentalNet: n * c.netRental };
   });
 
   useEffect(() => {
@@ -36,7 +35,7 @@ export default function HoldJual({ s, c }: Props) {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 12 } } },
         scales: {
-          y: { ticks: { callback: (v: unknown) => { const n = Number(v); return Math.abs(n) >= 1e9 ? `${(n/1e9).toFixed(1)}M` : Math.abs(n) >= 1e6 ? `${(n/1e6).toFixed(0)}jt` : n.toString(); }, font: { size: 11 } }, grid: { color: "#e5e7eb" } },
+          y: { ticks: { callback: (v: unknown) => { const n = Number(v); return Math.abs(n) >= 1e9 ? `Rp ${(n/1e9).toFixed(1)}M` : Math.abs(n) >= 1e6 ? `Rp ${(n/1e6).toFixed(0)}jt` : `Rp ${n}`; }, font: { size: 11 } }, grid: { color: "#f1f5f9" } },
           y2: { position: "right", ticks: { callback: (v: unknown) => `${Number(v).toFixed(0)}%`, font: { size: 11 } }, grid: { display: false } },
           x: { ticks: { font: { size: 11 } }, grid: { display: false } },
         },
@@ -51,26 +50,37 @@ export default function HoldJual({ s, c }: Props) {
     <>
       <div className="tab-controls">
         <label>Hold &amp; sewa selama:</label>
-        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>{s.holdYears}</span>
+        <input
+          type="number"
+          min={1}
+          max={10}
+          value={s.holdYears || ""}
+          onChange={e => onChange({ ...s, holdYears: parseFloat(e.target.value) || 1 })}
+          style={{ width: 70 }}
+        />
         <span className="dim" style={{ fontSize: 11 }}>tahun, lalu jual semua unit di tahun berikutnya</span>
       </div>
 
       <div className="result-box">
         <div className="result-item">
-          <div className="rl">Hold {s.holdYears}yr — Net Profit</div>
+          <div className="rl">Hold {s.holdYears}yr — Total Keuntungan Bersih</div>
           <div className={`rv ${sel.holdNet >= 0 ? "green" : "red"} num`}>{fmtIdr(sel.holdNet)}</div>
+          <div className="usd">≈ {fmtUsd(sel.holdNet, fx)}</div>
         </div>
         <div className="result-item">
           <div className="rl">ROI Total</div>
           <div className={`rv ${sel.holdROI >= 0 ? "indigo" : "red"} num`}>{pct(sel.holdROI)}</div>
+          <div className="usd">{s.holdYears} thn hold + 1 thn jual</div>
         </div>
         <div className="result-item">
-          <div className="rl">Kum. Cashflow Sewa</div>
+          <div className="rl">Kum. Sewa Neto ({s.holdYears} thn)</div>
           <div className="rv blue num">{fmtIdr(sel.cumRentalNet)}</div>
+          <div className="usd">≈ {fmtUsd(sel.cumRentalNet, fx)}</div>
         </div>
         <div className="result-item">
           <div className="rl">Net Jual (setelah komisi)</div>
           <div className="rv green num">{fmtIdr(c.netSell)}</div>
+          <div className="usd">≈ {fmtUsd(c.netSell, fx)}</div>
         </div>
       </div>
 
@@ -83,7 +93,7 @@ export default function HoldJual({ s, c }: Props) {
         <table className="sim-table">
           <thead>
             <tr>
-              {["Hold", "Kum. CF Sewa", "Net Jual", "Net Profit Total", "ROI"].map(h => (
+              {["Hold", "Kum. Sewa Neto", "Net Jual", "Net Profit Total", "ROI"].map(h => (
                 <th key={h} style={{ textAlign: "right" }}>{h}</th>
               ))}
             </tr>
