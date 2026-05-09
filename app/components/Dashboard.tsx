@@ -44,12 +44,7 @@ export default function Dashboard() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
-      })
-        .then(r => r.json())
-        .then((updated: Project) => {
-          setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
-        })
-        .catch(console.error);
+      }).catch(console.error);
     }, 600);
   }, []);
 
