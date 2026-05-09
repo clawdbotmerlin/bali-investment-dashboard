@@ -92,9 +92,6 @@ export default function Ringkasan({ s, c }: Props) {
                sub={s.sellMode === "presale"
                  ? `${s.terms === "installment" ? "DP lease" : "Lease lunas"} + 1 show unit + extras (${((c.year0Capital / c.total) * 100).toFixed(0)}% dari total)`
                  : `Bangun semua ${s.units} unit upfront${s.terms === "installment" ? " + DP lease" : ""}`} />
-        <SCard label="Best-case ROC (jual habis di Thn 1)" value={pct(c.year1BestROC)}
-               cls={c.year1BestROC >= 0 ? "green" : "red"}
-               sub={`Net Thn 1: ${fmtIdr(c.year1BestNet)} ÷ Modal Thn 0: ${fmtIdr(c.year0Capital)}`} />
         <SCard label="Biaya / Unit" value={fmtIdr(c.costPU)} cls="purple" usd={fmtUsd(c.costPU, fx)}
                sub={`${s.units} unit total`} />
         <SCard label="Harga Jual / Unit" value={fmtIdr(c.sellPU)} cls="amber" usd={fmtUsd(c.sellPU, fx)}
@@ -110,9 +107,6 @@ export default function Ringkasan({ s, c }: Props) {
         <SCard label="Sewa Neto / Tahun" value={fmtIdr(c.rental)} cls="blue" usd={fmtUsd(c.rental, fx)}
                roi={pct(c.yield_)} roiCls="blue"
                sub={`${occ}% occ. · yield tahunan`} />
-        <SCard label={`Sewa Total Sepanjang ${s.years} Thn`} value={fmtIdr(totalLeaseRental)} cls="blue"
-               usd={fmtUsd(totalLeaseRental, fx)} roi={pct(totalLeaseROI)} roiCls={totalLeaseROI >= 0 ? "green" : "red"}
-               sub={`${fmtIdr(c.rental)}/thn × ${s.years} thn (asumsi occupancy konstan)`} />
         <SCard label={`Hold ${c.N}yr → Jual`} value={fmtIdr(c.holdNet)} cls={c.holdNet >= 0 ? "green" : "red"}
                usd={fmtUsd(c.holdNet, fx)} roi={pct(c.holdROI)} roiCls={c.holdROI >= 0 ? "green" : "red"}
                sub={`${c.N} thn sewa + jual semua di Thn ${c.N + 1}`} />
