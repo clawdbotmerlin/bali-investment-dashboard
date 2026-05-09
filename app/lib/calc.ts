@@ -48,12 +48,18 @@ export function calc(s: SessionData): CalcResult {
 
   // Year-0 capital + best-case Year-1 ROC (sell all units in year 1)
   const presale = s.sellMode === "presale";
-  const year0Capital = presale
-    ? (s.terms === "installment" ? dpAmt : leasehold) + s.buildPerUnit + upfrontExtras
+  const leaseOnly = s.sellMode === "lease_only";
+  const landPaidY0 = s.terms === "installment" ? dpAmt : leasehold;
+  const year0Capital = leaseOnly
+    ? landPaidY0 + upfrontExtras
+    : presale
+    ? landPaidY0 + s.buildPerUnit + upfrontExtras
     : (s.terms === "installment" ? dpAmt + s.units * s.buildPerUnit + upfrontExtras : total);
   const sellNetPU = sellPU * (1 - (s.agentSell || 0) / 100);
   const year1Revenue = s.units * sellNetPU;
-  const year1BuildCost = presale ? Math.max(0, s.units - 1) * s.buildPerUnit : 0;
+  const year1BuildCost = leaseOnly
+    ? s.units * s.buildPerUnit
+    : presale ? Math.max(0, s.units - 1) * s.buildPerUnit : 0;
   const year1Installment = s.terms === "installment" && s.tenor >= 1 ? annualI : 0;
   const year1BestNet = year1Revenue - year1BuildCost - year1Installment;
   const year1BestROC = year0Capital > 0 ? (year1BestNet / year0Capital) * 100 : 0;
@@ -83,9 +89,13 @@ export interface SellYearRow {
 export function cfSell(s: SessionData, c: CalcResult): SellYearRow[] {
   const sellNetPU = c.sellPU * (1 - (s.agentSell || 0) / 100);
   const presale = s.sellMode === "presale";
+  const leaseOnly = s.sellMode === "lease_only";
+  const buildAsYouSell = presale || leaseOnly;
+  const landPaid = s.terms === "installment" ? c.dpAmt : c.leasehold;
   let initOut: number;
-  if (presale) {
-    const landPaid = s.terms === "installment" ? c.dpAmt : c.leasehold;
+  if (leaseOnly) {
+    initOut = landPaid + c.upfrontExtras;
+  } else if (presale) {
     initOut = landPaid + s.buildPerUnit + c.upfrontExtras;
   } else {
     initOut = s.terms === "installment"
@@ -96,7 +106,7 @@ export function cfSell(s: SessionData, c: CalcResult): SellYearRow[] {
   const rows: SellYearRow[] = [];
   let cum = 0;
   let unitsLeft = s.units;
-  let unitsBuilt = presale ? 1 : s.units;
+  let unitsBuilt = leaseOnly ? 0 : presale ? 1 : s.units;
   const upy = Math.max(1, s.upy || 1);
 
   for (let yr = 0; yr <= 10; yr++) {
@@ -107,7 +117,7 @@ export function cfSell(s: SessionData, c: CalcResult): SellYearRow[] {
       sold = Math.max(0, Math.min(upy, unitsLeft));
       ci = sold * sellNetPU;
       unitsLeft -= sold;
-      if (presale) {
+      if (buildAsYouSell) {
         const target = s.units - unitsLeft;
         built = Math.max(0, target - unitsBuilt);
         unitsBuilt += built;

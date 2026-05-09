@@ -11,6 +11,8 @@ export default function SimulasiJual({ s, c, onChange }: Props) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<{ destroy(): void } | null>(null);
   const presale = s.sellMode === "presale";
+  const leaseOnly = s.sellMode === "lease_only";
+  const showBuilt = presale || leaseOnly;
   const initOut = rows[0]?.cashOut ?? 0;
   const fx = s.fxRate;
 
@@ -39,11 +41,13 @@ export default function SimulasiJual({ s, c, onChange }: Props) {
   }, [rows]);
 
   const targetYear = Math.ceil(s.units / Math.max(1, s.upy || 1));
-  const hint = presale
+  const hint = leaseOnly
+    ? `Tahun 0: bayar ${s.terms === "installment" ? "DP" : "lunas"} lease + extras saja = ${fmtIdr(initOut)} (${fmtUsd(initOut, fx)}). Tahun 1+: tiap unit dijual baru dibangun (no show unit). Total ${s.units} unit, target ${s.upy}/thn → habis terjual di Tahun ${targetYear}.`
+    : presale
     ? `Tahun 0: bayar tanah + bangun 1 show unit + extras = ${fmtIdr(initOut)} (${fmtUsd(initOut, fx)}). Tahun 1+: tiap unit dijual baru dibangun. Total ${s.units} unit, target ${s.upy}/thn → habis terjual di Tahun ${targetYear}.`
     : `Tahun 0: bangun semua ${s.units} unit upfront = ${fmtIdr(initOut)} (${fmtUsd(initOut, fx)}). Tahun 1+: hanya pendapatan penjualan. Total ${s.units} unit, target ${s.upy}/thn → habis terjual di Tahun ${targetYear}.`;
 
-  const headers = presale
+  const headers = showBuilt
     ? ["Tahun", "Sold", "Built", "Cash In", "Cash Out", "Net", "Kumulatif"]
     : ["Tahun", "Sold", "Cash In", "Cash Out", "Net", "Kumulatif"];
 
@@ -58,6 +62,7 @@ export default function SimulasiJual({ s, c, onChange }: Props) {
         >
           <option value="upfront">Bangun Semua di Tahun 0</option>
           <option value="presale">Show Unit + Presale (build per sale)</option>
+          <option value="lease_only">Lease Only (no show unit, build per sale)</option>
         </select>
         <label>Unit terjual / tahun:</label>
         <input
@@ -85,7 +90,7 @@ export default function SimulasiJual({ s, c, onChange }: Props) {
               <tr key={r.year} style={{ background: r.cumulative >= 0 && r.year > 0 ? "var(--success-light)" : "transparent" }}>
                 <td style={{ textAlign: "right", fontWeight: 600 }}>Thn {r.year}</td>
                 <td style={{ textAlign: "right" }}>{r.unitsSold || "—"}</td>
-                {presale && <td style={{ textAlign: "right" }}>{r.unitsBuilt || "—"}</td>}
+                {showBuilt && <td style={{ textAlign: "right" }}>{r.unitsBuilt || "—"}</td>}
                 <td style={{ textAlign: "right" }} className="num pos">{r.cashIn ? fmtIdr(r.cashIn) : "—"}</td>
                 <td style={{ textAlign: "right" }} className="num neg">{r.cashOut ? `−${fmtIdr(r.cashOut)}` : "—"}</td>
                 <td style={{ textAlign: "right", fontWeight: 600 }} className={`num ${r.net >= 0 ? "pos" : "neg"}`}>{fmtIdr(r.net)}</td>

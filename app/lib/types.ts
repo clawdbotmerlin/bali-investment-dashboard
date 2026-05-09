@@ -22,7 +22,7 @@ export interface SessionData {
   pmgmt: number;
   upy: number;
   holdYears: number;
-  sellMode: "upfront" | "presale";
+  sellMode: "upfront" | "presale" | "lease_only";
   fxRate: number;
   mapUrl?: string;
 }
