@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SessionData, CalcResult } from "@/lib/types";
 import { fmtIdr, fmtUsd, pct, cfSell, cfRent } from "@/lib/calc";
 
@@ -32,6 +32,20 @@ export default function Ringkasan({ s, c, onChange }: Props) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<{ destroy(): void } | null>(null);
   const fx = s.fxRate;
+
+  const [noteDraft, setNoteDraft] = useState(s.notes || "");
+  const lastNotes = useRef(s.notes || "");
+  useEffect(() => {
+    if ((s.notes || "") !== lastNotes.current) {
+      setNoteDraft(s.notes || "");
+      lastNotes.current = s.notes || "";
+    }
+  }, [s.notes]);
+  const noteDirty = noteDraft !== (s.notes || "");
+  const saveNote = () => {
+    lastNotes.current = noteDraft;
+    onChange({ ...s, notes: noteDraft });
+  };
 
   const lp = c.total > 0 ? ((c.leasehold / c.total) * 100).toFixed(0) : "0";
   const bp = c.total > 0 ? ((c.build / c.total) * 100).toFixed(0) : "0";
@@ -133,17 +147,26 @@ export default function Ringkasan({ s, c, onChange }: Props) {
                sub={`${c.N} thn sewa + jual semua di Thn ${c.N + 1}`} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
-        <div className="chart-box" style={{ marginBottom: 0 }}>
-          <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
-          <div className="chart-wrap"><canvas ref={chartRef} /></div>
-        </div>
-
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14 }}>
         <div className="chart-box" style={{ marginBottom: 0, display: "flex", flexDirection: "column" }}>
-          <div className="chart-title">Catatan Proyek</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div className="chart-title" style={{ marginBottom: 0 }}>Catatan Proyek{noteDirty ? " •" : ""}</div>
+            <button
+              onClick={saveNote}
+              disabled={!noteDirty}
+              style={{
+                padding: "4px 12px", fontSize: 12, fontWeight: 600,
+                background: noteDirty ? "var(--primary)" : "var(--border)",
+                color: noteDirty ? "#fff" : "var(--text-3)",
+                border: "none", borderRadius: 6,
+                cursor: noteDirty ? "pointer" : "default",
+              }}
+            >Simpan</button>
+          </div>
           <textarea
-            value={s.notes || ""}
-            onChange={e => onChange({ ...s, notes: e.target.value })}
+            value={noteDraft}
+            onChange={e => setNoteDraft(e.target.value)}
+            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveNote(); } }}
             placeholder="Pros & cons, akses jalan, view, tetangga, izin, risiko, kontak owner, dll."
             style={{
               width: "100%", flex: 1, minHeight: 280, resize: "vertical",
@@ -152,6 +175,11 @@ export default function Ringkasan({ s, c, onChange }: Props) {
               color: "var(--text)", outline: "none", lineHeight: 1.6,
             }}
           />
+        </div>
+
+        <div className="chart-box" style={{ marginBottom: 0 }}>
+          <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
+          <div className="chart-wrap"><canvas ref={chartRef} /></div>
         </div>
       </div>
     </>
