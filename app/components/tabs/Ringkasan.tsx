@@ -133,24 +133,26 @@ export default function Ringkasan({ s, c, onChange }: Props) {
                sub={`${c.N} thn sewa + jual semua di Thn ${c.N + 1}`} />
       </div>
 
-      <div className="chart-box">
-        <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
-        <div className="chart-wrap"><canvas ref={chartRef} /></div>
-      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14 }}>
+        <div className="chart-box" style={{ marginBottom: 0 }}>
+          <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
+          <div className="chart-wrap"><canvas ref={chartRef} /></div>
+        </div>
 
-      <div className="chart-box">
-        <div className="chart-title">Catatan Proyek</div>
-        <textarea
-          value={s.notes || ""}
-          onChange={e => onChange({ ...s, notes: e.target.value })}
-          placeholder="Pros & cons, akses jalan, view, tetangga, izin, risiko, kontak owner, dll."
-          style={{
-            width: "100%", minHeight: 160, resize: "vertical",
-            background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: 8, padding: 12, fontSize: 13, fontFamily: "inherit",
-            color: "var(--text)", outline: "none", lineHeight: 1.6,
-          }}
-        />
+        <div className="chart-box" style={{ marginBottom: 0, display: "flex", flexDirection: "column" }}>
+          <div className="chart-title">Catatan Proyek</div>
+          <textarea
+            value={s.notes || ""}
+            onChange={e => onChange({ ...s, notes: e.target.value })}
+            placeholder="Pros & cons, akses jalan, view, tetangga, izin, risiko, kontak owner, dll."
+            style={{
+              width: "100%", flex: 1, minHeight: 280, resize: "vertical",
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: 8, padding: 12, fontSize: 13, fontFamily: "inherit",
+              color: "var(--text)", outline: "none", lineHeight: 1.6,
+            }}
+          />
+        </div>
       </div>
     </>
   );
