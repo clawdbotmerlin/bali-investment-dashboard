@@ -44,7 +44,7 @@ export default function TabPanel({ activeProject, allProjects, onChange }: TabPa
       </div>
 
       <div className="right-content" style={{ flex: 1 }}>
-        {activeTab === "ringkasan" && <Ringkasan s={activeProject.data} c={c} />}
+        {activeTab === "ringkasan" && <Ringkasan s={activeProject.data} c={c} onChange={onChange} />}
         {activeTab === "jual" && <SimulasiJual s={activeProject.data} c={c} onChange={onChange} />}
         {activeTab === "sewa" && <SimulasiSewa s={activeProject.data} c={c} />}
         {activeTab === "hold" && <HoldJual s={activeProject.data} c={c} onChange={onChange} />}

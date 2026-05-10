@@ -12,6 +12,7 @@ export function defaultSession(): SessionData {
     upy: 2, holdYears: 1,
     sellMode: "upfront", fxRate: 16000,
     mapUrl: "",
+    notes: "",
   };
 }
 

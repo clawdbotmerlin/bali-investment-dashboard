@@ -25,6 +25,7 @@ export interface SessionData {
   sellMode: "upfront" | "presale" | "lease_only";
   fxRate: number;
   mapUrl?: string;
+  notes?: string;
 }
 
 export interface Project {

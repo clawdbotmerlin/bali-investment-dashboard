@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { SessionData, CalcResult } from "@/lib/types";
 import { fmtIdr, fmtUsd, pct, cfSell, cfRent } from "@/lib/calc";
 
-interface Props { s: SessionData; c: CalcResult; }
+interface Props { s: SessionData; c: CalcResult; onChange: (s: SessionData) => void; }
 
 function SCard({ label, value, cls, usd, roi, roiCls, roi2, roi2Label, roi2Cls, sub }: {
   label: string; value: string; cls?: string; usd?: string;
@@ -28,7 +28,7 @@ function SCard({ label, value, cls, usd, roi, roiCls, roi2, roi2Label, roi2Cls, 
   );
 }
 
-export default function Ringkasan({ s, c }: Props) {
+export default function Ringkasan({ s, c, onChange }: Props) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<{ destroy(): void } | null>(null);
   const fx = s.fxRate;
@@ -136,6 +136,21 @@ export default function Ringkasan({ s, c }: Props) {
       <div className="chart-box">
         <div className="chart-title">Kumulatif Cash Flow — 10 Tahun · 3 Skenario</div>
         <div className="chart-wrap"><canvas ref={chartRef} /></div>
+      </div>
+
+      <div className="chart-box">
+        <div className="chart-title">Catatan Proyek</div>
+        <textarea
+          value={s.notes || ""}
+          onChange={e => onChange({ ...s, notes: e.target.value })}
+          placeholder="Pros & cons, akses jalan, view, tetangga, izin, risiko, kontak owner, dll."
+          style={{
+            width: "100%", minHeight: 160, resize: "vertical",
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 8, padding: 12, fontSize: 13, fontFamily: "inherit",
+            color: "var(--text)", outline: "none", lineHeight: 1.6,
+          }}
+        />
       </div>
     </>
   );
